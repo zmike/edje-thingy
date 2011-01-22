@@ -26,6 +26,7 @@
 #include "edje_parser_lib.h"
 #include "edje.h"
 #include "edje_parser.h"
+#include "edje_parser_macros.h"
 #include <ctype.h>
 #include <errno.h>
 
@@ -42,66 +43,7 @@
 #define NEXT \
        edje_parser_stream_next(s, c - b); \
        b = c
-#define HEAD ep->head
-#define CURRENT ep->current
-#define SUBCURRENT ep->subcurrent
 
-#define COLLECTION ep->collection
-#define COLOR_CLASS ep->color_class
-#define IMAGES ep->images
-#define SETS ep->set
-
-#define EDJE ep->edje
-#define EDJE_CREATE if (!EDJE) EDJE = edje_new()
-/* append to parser for grabbing later */
-#define PARSER_APPEND(NAME, APPEND, TYPE) \
- if (NAME) \
-   {  \
-      Eina_Inlist *l; \
-      l = eina_inlist_append(EINA_INLIST_GET(NAME), EINA_INLIST_GET(APPEND)); \
-      NAME = EINA_INLIST_CONTAINER_GET(l, TYPE); \
-   } \
- else \
-   NAME = APPEND
-/* append to edje struct */
-#define EDJE_APPEND(NAME, APPEND, TYPE) \
- if (EDJE->NAME) \
-   {  \
-      Eina_Inlist *l; \
-      l = eina_inlist_append(EINA_INLIST_GET(EDJE->NAME), EINA_INLIST_GET(APPEND)); \
-      EDJE->NAME = EINA_INLIST_CONTAINER_GET(l, TYPE); \
-   } \
- else \
-   EDJE->NAME = APPEND
-#define EDJE_SUBAPPEND(S) \
- ep->subcurlist = eina_list_append(ep->subcurlist, S)
- /* append to current collection */
-#define EDJE_COLLECTION_APPEND(NAME, APPEND, TYPE) \
- if (COLLECTION->NAME) \
-   { \
-      Eina_Inlist *l; \
-      l = eina_inlist_append(EINA_INLIST_GET(COLLECTION->NAME), APPEND); \
-      COLLECTION->NAME = EINA_INLIST_CONTAINER_GET(l, TYPE); \
-   } \
- else \
-  COLLECTION->NAME = EINA_INLIST_GET((TYPE*)APPEND)
-#define ERROR_SYNTAX(TOKEN) do {                                                                          \
-  if ((!TOKEN) || (!TOKEN->type))                                                                         \
-    eina_stringshare_replace(&ep->error, "Unexpected EOF!\n");                                            \
-  else                                                                                                    \
-    {                                                                                                     \
-       eina_stringshare_del(ep->error);                                                                   \
-       ep->error = eina_stringshare_printf(                                                               \
-         "Syntax error on line %d column %d: unexpected token %s:'%s'\n",                                 \
-         TOKEN->sline + 1, TOKEN->scol + 1, yyTokenName[TOKEN->type], TOKEN->text);             \
-    }                                                                                                     \
-} while (0)
-#define ERROR_RANGE(TOKEN) do { \
-   eina_stringshare_del(ep->error); \
-   ep->error = eina_stringshare_printf( \
-               "Syntax error on line %d column %d: Out of range value '%s'\n", \
-               TOKEN->sline + 1, TOKEN->scol + 1, TOKEN->text); \
-} while (0)
 extern void *edje_parser_Alloc(void *(*)(size_t));
 extern void  edje_parser_Free(void *, void (*)(void *));
 extern void  edje_parser_(void *,
@@ -156,7 +98,6 @@ main:
    NONPRINT   = [^];
    ENDINPUT   = "\000";
    D     = [-]?[0-9]+;
-   C     = [A-Za-z0-9_ !?,.];
    N     = [a-z0-9_];
 
    SLCOM = "\\" (.\ENDINPUT)* ("\n"|ENDINPUT);
@@ -171,6 +112,10 @@ main:
    "color_classes"    { RET(EDJE_COLOR_CLASSES); }
    "color_class"      { RET(EDJE_COLOR_CLASS); }
    "group"            { RET(EDJE_GROUP); }
+   "RAW"              { RET(EDJE_RAW); }
+   "COMP"             { RET(EDJE_COMP); }
+   "LOSSY"            { RET(EDJE_LOSSY); }
+   "USER"             { RET(EDJE_USER); }
    "{"                { RET(EDJE_LB); }
    "}"                { RET(EDJE_RB); }
 
@@ -202,7 +147,7 @@ commentblock:
    }
 
    /* handle errno more easily */
-   static Eina_Bool edje_strtol(const char *text, int *i)
+   static Eina_Bool edje_parser_strtol(const char *text, int *i)
    {
         errno = 0;
         *i = strtol(text, NULL, 10);
@@ -223,16 +168,18 @@ toplevel_block ::= collection.
    EDJE_APPEND(collections, COLLECTION, Edje_Collection);
    COLLECTION = NULL;
 }
+toplevel_block ::= images.
+{
+   EDJE_CREATE;
+   EDJE_APPEND(images, IMAGES, Edje_Images);
+   IMAGES = NULL;
+}
+
 /*
 toplevel_block ::= externals_block(B).
 {
    EDJE_CREATE;
    EDJE_APPEND(externals);
-}
-toplevel_block ::= images_block(B).
-{
-   EDJE_CREATE;
-   EDJE_APPEND(images);
 }
 toplevel_block ::= sets_block(B).
 {
@@ -279,26 +226,15 @@ collection_start ::= doc_comment(C) COLLECTIONS.
    
    EDJE_CREATE;
    c = edje_collection_new();
-   if (COLLECTION)
-     {
-        Eina_Inlist *l;
-        l = eina_inlist_append(EINA_INLIST_GET(COLLECTION), EINA_INLIST_GET(c));
-        COLLECTION = EINA_INLIST_CONTAINER_GET(l, Edje_Collection);
-     }
-   else
-     COLLECTION = c;
+   PARSER_APPEND(COLLECTION, c, Edje_Collection);
    printf("Collection: %p\n", c);
    c->doc = C;
 }
 collection_block ::= LB collections_subblocks RB.
 {
    Edje_Collection *c;
-   Eina_Inlist *l;
 
-   l = EINA_INLIST_GET(COLLECTION);
-   /* current collection is last collection */
-   if (l->last) l = l->last;
-   c = EINA_INLIST_CONTAINER_GET(l, Edje_Collection);
+   c = PARSER_CURRENT(COLLECTION, Edje_Collection);
    c->groups = EINA_INLIST_CONTAINER_GET(HEAD, Edje_Group);
    CURRENT = HEAD = NULL;
 }
@@ -307,12 +243,16 @@ collections_subblocks ::= collections_subblock.
 
 collections_subblock ::= group.
 {
-   EDJE_COLLECTION_APPEND(groups, HEAD, Edje_Group);
+   Edje_Collection *c;
+   c = PARSER_CURRENT(COLLECTION, Edje_Collection);
+   EDJE_STRUCT_APPEND(c, groups, HEAD, Edje_Group);
    CURRENT = HEAD = NULL;
 }
 collections_subblock ::= color_classes.
 {
-   EDJE_COLLECTION_APPEND(color_classes, EINA_INLIST_GET(COLOR_CLASS), Edje_Color_Class);
+   Edje_Collection *c;
+   c = PARSER_CURRENT(COLLECTION, Edje_Collection);
+   EDJE_STRUCT_APPEND(c, color_classes, EINA_INLIST_GET(COLOR_CLASS), Edje_Color_Class);
    COLOR_CLASS = NULL;
 }
 /******************************* END COLLECTIONS CODE *********************************/
@@ -337,11 +277,8 @@ color_class_properties ::= color_class_property.
 color_class_property ::= PROPERTY ID(I) SEMICOLON.
 {
    Edje_Color_Class *c;
-   Eina_Inlist *l;
 
-   l = EINA_INLIST_GET(COLOR_CLASS);
-   if (l->last) l = l->last;
-   c = EINA_INLIST_CONTAINER_GET(l, Edje_Color_Class);
+   c = PARSER_CURRENT(COLOR_CLASS, Edje_Color_Class);
    printf("Color class name: %s\n", I->text);
    c->name = eina_stringshare_add(I->text);
    edje_parser_token_free(I);
@@ -352,11 +289,8 @@ color_class_property ::= PROPERTY(P) INTEGER(I) INTEGER(J) INTEGER(K) INTEGER(L)
    int *color, i;
    const char *text[4];
    Edje_Color_Class *c;
-   Eina_Inlist *l;
 
-   l = EINA_INLIST_GET(COLOR_CLASS);
-   if (l->last) l = l->last;
-   c = EINA_INLIST_CONTAINER_GET(l, Edje_Color_Class);
+   c = PARSER_CURRENT(COLOR_CLASS, Edje_Color_Class);
 
    text[0] = I->text;
    text[1] = J->text;
@@ -383,7 +317,7 @@ color_class_property ::= PROPERTY(P) INTEGER(I) INTEGER(J) INTEGER(K) INTEGER(L)
 
    for (i = 0; i < 4; i++)
      {
-        if (!edje_strtol(text[i], &color[i]) || (color[i] < 0) || (color[i] > 255))
+        if (!edje_parser_strtol(text[i], &color[i]) || (color[i] < 0) || (color[i] > 255))
           {
              switch (i)
                {
@@ -412,7 +346,7 @@ color_class_property_out:
 }
 /******************************* END COLOR_CLASS CODE *********************************/
 /******************************* START IMAGES CODE *********************************/
-%type images {Edje_Images *}
+
 images ::= images_start images_blocks.
 images_start ::= doc_comment(C) IMAGES.
 {
@@ -427,9 +361,79 @@ images_start ::= doc_comment(C) IMAGES.
 images_blocks ::= LB images_subblocks RB.
 images_subblocks ::= images_subblocks images_subblock.
 images_subblocks ::= images_subblock.
-images_subblock ::= PROPERTY(P) ID(I) compression.
 
-compression ::= 
+images_subblock ::= images_image_start compression SEMICOLON.
+{
+   Edje_Images *i;
+
+   i = PARSER_CURRENT(IMAGES, Edje_Images);
+   EDJE_STRUCT_APPEND(i, set_images, EINA_INLIST_GET(SET_IMAGE), Edje_Set_Image);
+   SET_IMAGE = NULL;
+}
+images_image_start ::= PROPERTY(P) ID(I).
+{
+   Edje_Set_Image *s;
+
+   if (strcmp(P->text, "image:"))
+     {
+        ERROR_SYNTAX(P);
+        goto images_image_out;
+     }
+   if (strchr(I->text, ':')) // invalid filename characters
+     {
+        ERROR_SYNTAX(I);
+        goto images_image_out;
+     }
+   EDJE_CREATE;
+   s = edje_set_image_new();
+   PARSER_APPEND(SET_IMAGE, s, Edje_Set_Image);
+   printf("Set image: %p\n", s);
+   s->filename = eina_stringshare_add_length(I->text + 1, strlen(I->text) - 2);
+
+images_image_out:
+   edje_parser_token_free(P);
+   edje_parser_token_free(I);
+}
+
+compression ::= RAW.
+{
+   Edje_Set_Image *i;
+
+   i = PARSER_CURRENT(SET_IMAGE, Edje_Set_Image);
+   i->comp = EDJE_COMPRESSION_TYPE_RAW;
+}
+compression ::= COMP.
+{
+   Edje_Set_Image *i;
+
+   i = PARSER_CURRENT(SET_IMAGE, Edje_Set_Image);
+   i->comp = EDJE_COMPRESSION_TYPE_COMP;
+}
+compression ::= LOSSY D(I).
+{
+   Edje_Set_Image *i;
+   int num;
+
+   if (!edje_parser_strtol(I->text, &num) || (num < 0) || (num > 100))
+     {
+        ERROR_RANGE(I);
+        goto compression_out;
+     }
+   i = PARSER_CURRENT(SET_IMAGE, Edje_Set_Image);
+   i->comp = EDJE_COMPRESSION_TYPE_LOSSY;
+   i->comp_amount = num;
+
+compression_out:
+   edje_parser_token_free(I);
+}
+compression ::= USER.
+{
+   Edje_Set_Image *i;
+
+   i = PARSER_CURRENT(SET_IMAGE, Edje_Set_Image);
+   i->comp = EDJE_COMPRESSION_TYPE_USER;
+}
+
 /******************************* END IMAGES CODE *********************************/
 /******************************* START GROUPS CODE *********************************/
 %type group {Edje_Group *}
@@ -485,7 +489,7 @@ group_property ::= PROPERTY(P) INTEGER(I) SEMICOLON. /* property: bool */
         goto group_property_bool_out;
      }
 
-   if (!edje_strtol(I->text, &i) || ((i != 1) && (i != 0)))
+   if (!edje_parser_strtol(I->text, &i) || ((i != 1) && (i != 0)))
      {
         ERROR_RANGE(I);
         goto group_property_bool_out;
@@ -506,7 +510,7 @@ group_property ::= PROPERTY(P) INTEGER(I) INTEGER(J) SEMICOLON. /* property: int
    if (!strcmp(P->text, "min:"))
      {
 
-        if ((!edje_strtol(I->text, &g->min[0])) || (g->min[0] < 0))
+        if ((!edje_parser_strtol(I->text, &g->min[0])) || (g->min[0] < 0))
           {
              ERROR_RANGE(I);
              goto group_property_int_out;
@@ -518,7 +522,7 @@ group_property ::= PROPERTY(P) INTEGER(I) INTEGER(J) SEMICOLON. /* property: int
                I->sline + 1, I->scol + 1);
              goto group_property_int_out; 
           }
-        if ((!edje_strtol(J->text, &g->min[1])) || (g->min[1] < 0))
+        if ((!edje_parser_strtol(J->text, &g->min[1])) || (g->min[1] < 0))
           ERROR_RANGE(J);
         else if ((g->max[0] < g->min[0]) || (g->max[1] < g->min[1]))
           {
@@ -529,7 +533,7 @@ group_property ::= PROPERTY(P) INTEGER(I) INTEGER(J) SEMICOLON. /* property: int
      }
    else if (!strcmp(P->text, "max:"))
      {
-        if ((!edje_strtol(I->text, &g->max[0])) || (g->max[0] < 0))
+        if ((!edje_parser_strtol(I->text, &g->max[0])) || (g->max[0] < 0))
           {
              ERROR_RANGE(I);
              goto group_property_int_out;
@@ -541,7 +545,7 @@ group_property ::= PROPERTY(P) INTEGER(I) INTEGER(J) SEMICOLON. /* property: int
                I->sline + 1, I->scol + 1);
              goto group_property_int_out; 
           }
-        if ((!edje_strtol(J->text, &g->max[1])) || (g->max[1] < 1))
+        if ((!edje_parser_strtol(J->text, &g->max[1])) || (g->max[1] < 1))
           ERROR_RANGE(J);
         else if ((g->max[0] < g->min[0]) || (g->max[1] < g->min[1]))
           {
@@ -559,18 +563,21 @@ group_property_int_out:
 }
 /******************************* END GROUPS CODE *********************************/
 /******************************* START PARTS CODE *********************************/
+/*
 parts ::= PARTS LB parts_subblocks RB.
 
 parts_subblocks ::= parts_subblocks parts_subblock.
 parts_subblocks ::= parts_subblock.
 
 parts_subblock ::= color_classes.
+parts_subblock ::= images.
+/*
 parts_subblock ::= parts_property.
 parts_subblock ::= sets.
-parts_subblock ::= images.
 parts_subblock ::= fonts.
 parts_subblock ::= styles.
 parts_subblock ::= part.
 parts_subblock ::= programs.
+*/
 
 /******************************* END PARTS CODE *********************************/

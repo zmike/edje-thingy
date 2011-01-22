@@ -134,17 +134,17 @@ typedef struct
 {
    EINA_INLIST;
    const char *doc;
+   const char *name;
    Edje_Set_Image *set_images;
-   Edje_Set *sets;
-} Edje_Images;
+} Edje_Set;
 
 typedef struct
 {
    EINA_INLIST;
    const char *doc;
-   const char *name;
    Edje_Set_Image *set_images;
-} Edje_Set;
+   Edje_Set *sets;
+} Edje_Images;
 
 typedef struct
 {
@@ -179,6 +179,7 @@ Edje_Color_Class *edje_color_class_new(void);
 Edje_External *edje_external_new(void);
 Edje_Images *edje_images_new(void);
 Edje_Image *edje_image_new(void);
+Edje_Set_Image *edje_set_image_new(void);
 Edje_Set *edje_set_new(void);
 Edje_Font *edje_font_new(void);
 Edje_Data *edje_data_new(void);

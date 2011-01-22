@@ -51,6 +51,7 @@ typedef struct
    Edje_Color_Class *color_class;
    Edje_Images *images;
    Edje_Set *set;
+   Edje_Set_Image *set_image;
    Eina_Inlist *head; /* head of current -v */
    void *current; /* whatever we're working on */
    void *subcurrent; /* subobject of current that we're working on */
