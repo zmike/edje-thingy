@@ -1,0 +1,576 @@
+/*
+ * Copyright 2011 Mike Blumenkrantz <mike@zentific.com>
+ *
+ * This program is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU Lesser General Public License as published
+ * by the Free Software Foundation, either version 2.1 of the License, or
+ * (at your option) any later version.
+ *
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the 
+ * GNU Lesser General Public License for more details.
+ *
+ * You should have received a copy of the GNU Lesser General Public License
+ * along with this program.  If not, see <http://www.gnu.org/licenses/>.
+ */
+
+%name edje_parser_
+%token_prefix EDJE_
+%token_type {Edje_Token *}
+%token_destructor {edje_parser_token_free($$);}
+%extra_argument {Edje_Parser *ep}
+%syntax_error {ERROR_SYNTAX(TOKEN);}
+%stack_overflow {eina_stringshare_replace(&ep->error, "Parser stack overflow!\n");}
+%include {
+#include "edje_parser_lib.h"
+#include "edje.h"
+#include "edje_parser.h"
+#include <ctype.h>
+#include <errno.h>
+
+#define YYCTYPE  char
+#define YYCURSOR c
+#define YYMARKER q
+#define YYCTXMARKER t
+
+#define EDJE_EOF     0
+#define EDJE_UNKNOWN (-1)
+
+#define RET(tok) return edje_parser_token_new(s, tok, c - b)
+
+#define NEXT \
+       edje_parser_stream_next(s, c - b); \
+       b = c
+#define HEAD ep->head
+#define CURRENT ep->current
+#define SUBCURRENT ep->subcurrent
+
+#define COLLECTION ep->collection
+#define COLOR_CLASS ep->color_class
+#define IMAGES ep->images
+#define SETS ep->set
+
+#define EDJE ep->edje
+#define EDJE_CREATE if (!EDJE) EDJE = edje_new()
+/* append to parser for grabbing later */
+#define PARSER_APPEND(NAME, APPEND, TYPE) \
+ if (NAME) \
+   {  \
+      Eina_Inlist *l; \
+      l = eina_inlist_append(EINA_INLIST_GET(NAME), EINA_INLIST_GET(APPEND)); \
+      NAME = EINA_INLIST_CONTAINER_GET(l, TYPE); \
+   } \
+ else \
+   NAME = APPEND
+/* append to edje struct */
+#define EDJE_APPEND(NAME, APPEND, TYPE) \
+ if (EDJE->NAME) \
+   {  \
+      Eina_Inlist *l; \
+      l = eina_inlist_append(EINA_INLIST_GET(EDJE->NAME), EINA_INLIST_GET(APPEND)); \
+      EDJE->NAME = EINA_INLIST_CONTAINER_GET(l, TYPE); \
+   } \
+ else \
+   EDJE->NAME = APPEND
+#define EDJE_SUBAPPEND(S) \
+ ep->subcurlist = eina_list_append(ep->subcurlist, S)
+ /* append to current collection */
+#define EDJE_COLLECTION_APPEND(NAME, APPEND, TYPE) \
+ if (COLLECTION->NAME) \
+   { \
+      Eina_Inlist *l; \
+      l = eina_inlist_append(EINA_INLIST_GET(COLLECTION->NAME), APPEND); \
+      COLLECTION->NAME = EINA_INLIST_CONTAINER_GET(l, TYPE); \
+   } \
+ else \
+  COLLECTION->NAME = EINA_INLIST_GET((TYPE*)APPEND)
+#define ERROR_SYNTAX(TOKEN) do {                                                                          \
+  if ((!TOKEN) || (!TOKEN->type))                                                                         \
+    eina_stringshare_replace(&ep->error, "Unexpected EOF!\n");                                            \
+  else                                                                                                    \
+    {                                                                                                     \
+       eina_stringshare_del(ep->error);                                                                   \
+       ep->error = eina_stringshare_printf(                                                               \
+         "Syntax error on line %d column %d: unexpected token %s:'%s'\n",                                 \
+         TOKEN->sline + 1, TOKEN->scol + 1, yyTokenName[TOKEN->type], TOKEN->text);             \
+    }                                                                                                     \
+} while (0)
+#define ERROR_RANGE(TOKEN) do { \
+   eina_stringshare_del(ep->error); \
+   ep->error = eina_stringshare_printf( \
+               "Syntax error on line %d column %d: Out of range value '%s'\n", \
+               TOKEN->sline + 1, TOKEN->scol + 1, TOKEN->text); \
+} while (0)
+extern void *edje_parser_Alloc(void *(*)(size_t));
+extern void  edje_parser_Free(void *, void (*)(void *));
+extern void  edje_parser_(void *,
+                         int,
+                         Edje_Token *,
+                         Edje_Parser *);
+/* for reference
+extern void        edje_parser_Trace(FILE *,
+                                    char *);
+*/
+   static Edje_Token *
+   edje_parser_stream_to_token(Edje_Stream *s)
+   {
+      const char *c, *b, *q;
+      //unsigned int cont = 0;
+
+      if (s->length == s->index)
+        return edje_parser_token_new(s, EDJE_EOF, 0);
+
+      c = b = s->buffer + s->index;
+/*
+   FILE  = ([^:\"]?[\040-\176]);
+ 
+   "#define"          { RET(EDJE_DEFINE); }
+   "#include"         { RET(EDJE_INCLUDE); }
+
+   "fonts"            { RET(EDJE_FONTS); }
+   "data"             { RET(EDJE_DATA); }
+   "images"           { RET(EDJE_IMAGES); }
+   "styles"           { RET(EDJE_STYLES); }
+   "externals"        { RET(EDJE_EXTERNALS); }
+
+   "parts"            { RET(EDJE_PARTS); }
+   "part"             { RET(EDJE_PART); }
+
+   
+
+   [-]?[0-9]*[.]?[0-9]* { RET(EDJE_DOUBLE); }
+
+   ":"                { RET(EDJE_COLON); }
+
+   "."                { RET(EDJE_DOT); }
+   "\""               { RET(EDJE_QUOTE); }
+*/
+main:
+/*!re2c
+
+   re2c:indent:top       = 2;
+   re2c:indent:string    = " ";
+   re2c:yyfill:enable    = 0;
+
+   NONPRINT   = [^];
+   ENDINPUT   = "\000";
+   D     = [-]?[0-9]+;
+   C     = [A-Za-z0-9_ !?,.];
+   N     = [a-z0-9_];
+
+   SLCOM = "\\" (.\ENDINPUT)* ("\n"|ENDINPUT);
+
+   SLCOM              { NEXT; goto main; }
+   "/*"               { goto commentblock; }
+   [ \t\n\r]+         { NEXT; goto main; }
+   "\""[\040-\176]+"\"" { RET(EDJE_ID); }
+   ([a-z]N+)":"       { RET(EDJE_PROPERTY); }
+
+   "collections"      { RET(EDJE_COLLECTIONS); }
+   "color_classes"    { RET(EDJE_COLOR_CLASSES); }
+   "color_class"      { RET(EDJE_COLOR_CLASS); }
+   "group"            { RET(EDJE_GROUP); }
+   "{"                { RET(EDJE_LB); }
+   "}"                { RET(EDJE_RB); }
+
+   D                  { RET(EDJE_INTEGER); }
+
+   ";"                { RET(EDJE_SEMICOLON); }
+   ENDINPUT           { RET(EDJE_EOF); }
+   NONPRINT           { RET(EDJE_UNKNOWN); }
+
+ */
+
+commentblock:
+/*!re2c
+   "*/"                { NEXT; goto main; }
+  ENDINPUT             { RET(EDJE_UNKNOWN); }
+  NONPRINT             { goto commentblock; }
+*/
+
+     return NULL;
+   }
+
+   Edje *edje_parse_string(const char *str, Eina_Bool *err)
+   {
+      return edje_parser_string_parse(str, err, edje_parser_, edje_parser_Alloc, edje_parser_Free, edje_parser_stream_to_token);
+   }
+   Edje *edje_parse_file(const char *path, Eina_Bool *err)
+   {
+      return edje_parser_file_parse(path, err, edje_parser_, edje_parser_Alloc, edje_parser_Free, edje_parser_stream_to_token);
+   }
+
+   /* handle errno more easily */
+   static Eina_Bool edje_strtol(const char *text, int *i)
+   {
+        errno = 0;
+        *i = strtol(text, NULL, 10);
+        if (errno) return EINA_FALSE;
+
+        return EINA_TRUE;
+   }
+
+}
+
+edje ::= toplevel_blocks.
+
+toplevel_blocks ::= toplevel_block.
+toplevel_blocks ::= toplevel_blocks toplevel_block.
+toplevel_block ::= collection.
+{
+   EDJE_CREATE;
+   EDJE_APPEND(collections, COLLECTION, Edje_Collection);
+   COLLECTION = NULL;
+}
+/*
+toplevel_block ::= externals_block(B).
+{
+   EDJE_CREATE;
+   EDJE_APPEND(externals);
+}
+toplevel_block ::= images_block(B).
+{
+   EDJE_CREATE;
+   EDJE_APPEND(images);
+}
+toplevel_block ::= sets_block(B).
+{
+   EDJE_CREATE;
+   EDJE_APPEND(sets);
+}
+toplevel_block ::= fonts_block(B).
+{
+   EDJE_CREATE;
+   EDJE_APPEND(fonts);
+}
+toplevel_block ::= data_block(B).
+{
+   EDJE_CREATE;
+   EDJE_APPEND(data);
+}
+toplevel_block ::= styles_block(B).
+{
+   EDJE_CREATE;
+   EDJE_APPEND(styles);
+}
+*/
+toplevel_block ::= color_classes.
+{
+   EDJE_CREATE;
+   EDJE_APPEND(color_classes, COLOR_CLASS, Edje_Color_Class);
+   COLOR_CLASS = NULL;
+}
+
+%type doc_comment {const char *}
+doc_comment(Y) ::= . {Y = NULL;}
+doc_comment(Y) ::= DOC(X).
+{
+   printf("Comment: %s\n", X->text);
+   Y = X->text;
+   X->text = NULL;
+   edje_parser_token_free(X);
+}
+/******************************* START COLLECTIONS CODE *********************************/
+collection ::= collection_start collection_block.
+collection_start ::= doc_comment(C) COLLECTIONS.
+{
+   Edje_Collection *c;
+   
+   EDJE_CREATE;
+   c = edje_collection_new();
+   if (COLLECTION)
+     {
+        Eina_Inlist *l;
+        l = eina_inlist_append(EINA_INLIST_GET(COLLECTION), EINA_INLIST_GET(c));
+        COLLECTION = EINA_INLIST_CONTAINER_GET(l, Edje_Collection);
+     }
+   else
+     COLLECTION = c;
+   printf("Collection: %p\n", c);
+   c->doc = C;
+}
+collection_block ::= LB collections_subblocks RB.
+{
+   Edje_Collection *c;
+   Eina_Inlist *l;
+
+   l = EINA_INLIST_GET(COLLECTION);
+   /* current collection is last collection */
+   if (l->last) l = l->last;
+   c = EINA_INLIST_CONTAINER_GET(l, Edje_Collection);
+   c->groups = EINA_INLIST_CONTAINER_GET(HEAD, Edje_Group);
+   CURRENT = HEAD = NULL;
+}
+collections_subblocks ::= collections_subblocks collections_subblock.
+collections_subblocks ::= collections_subblock.
+
+collections_subblock ::= group.
+{
+   EDJE_COLLECTION_APPEND(groups, HEAD, Edje_Group);
+   CURRENT = HEAD = NULL;
+}
+collections_subblock ::= color_classes.
+{
+   EDJE_COLLECTION_APPEND(color_classes, EINA_INLIST_GET(COLOR_CLASS), Edje_Color_Class);
+   COLOR_CLASS = NULL;
+}
+/******************************* END COLLECTIONS CODE *********************************/
+/******************************* START COLOR_CLASS CODE *********************************/
+color_classes ::= color_classes_start color_classes_block.
+color_classes_start ::= doc_comment COLOR_CLASSES.
+color_classes_block ::= LB color_class RB.
+
+color_class ::= color_class color_class_start color_class_block.
+color_class ::= color_class_start color_class_block.
+color_class_start ::= doc_comment(C) COLOR_CLASS.
+{
+   Edje_Color_Class *c;
+
+   c = edje_color_class_new();
+   PARSER_APPEND(COLOR_CLASS, c, Edje_Color_Class);
+   c->doc = C;
+}
+color_class_block ::= LB color_class_properties RB.
+color_class_properties ::= color_class_properties color_class_property.
+color_class_properties ::= color_class_property.
+color_class_property ::= PROPERTY ID(I) SEMICOLON.
+{
+   Edje_Color_Class *c;
+   Eina_Inlist *l;
+
+   l = EINA_INLIST_GET(COLOR_CLASS);
+   if (l->last) l = l->last;
+   c = EINA_INLIST_CONTAINER_GET(l, Edje_Color_Class);
+   printf("Color class name: %s\n", I->text);
+   c->name = eina_stringshare_add(I->text);
+   edje_parser_token_free(I);
+}
+color_class_property ::= PROPERTY(P) INTEGER(I) INTEGER(J) INTEGER(K) INTEGER(L) SEMICOLON.
+{
+   size_t len;
+   int *color, i;
+   const char *text[4];
+   Edje_Color_Class *c;
+   Eina_Inlist *l;
+
+   l = EINA_INLIST_GET(COLOR_CLASS);
+   if (l->last) l = l->last;
+   c = EINA_INLIST_CONTAINER_GET(l, Edje_Color_Class);
+
+   text[0] = I->text;
+   text[1] = J->text;
+   text[2] = K->text;
+   text[3] = L->text;
+   printf("Color class property: %s:%s %s %s %s\n", P->text, I->text, J->text, K->text, L->text);
+   len = strlen(P->text); /* check for color*: */
+   if ((len < 6) || (len > 7) || (strncmp(P->text, "color", 5)))
+     {
+        ERROR_SYNTAX(P);
+        goto color_class_property_out;
+     }
+   if ((len == 7) && ((P->text[5] != '2') && (P->text[5] != '3')))
+     {
+        ERROR_SYNTAX(P);
+        goto color_class_property_out;
+     }
+   if (len == 6) /* color: */
+     color = c->color;
+   else if (P->text[5] == '2') /* color2: */
+     color = c->color2;
+   else /* color3: */
+     color = c->color3;
+
+   for (i = 0; i < 4; i++)
+     {
+        if (!edje_strtol(text[i], &color[i]) || (color[i] < 0) || (color[i] > 255))
+          {
+             switch (i)
+               {
+                case 0:
+                  ERROR_RANGE(I);
+                  break;
+                case 1:
+                  ERROR_RANGE(J);
+                  break;
+                case 2:
+                  ERROR_RANGE(K);
+                  break;
+                default:
+                  ERROR_RANGE(L);
+               }
+             break;
+          }
+     }
+   
+color_class_property_out:
+   edje_parser_token_free(P);
+   edje_parser_token_free(I);
+   edje_parser_token_free(J);
+   edje_parser_token_free(K);
+   edje_parser_token_free(L);
+}
+/******************************* END COLOR_CLASS CODE *********************************/
+/******************************* START IMAGES CODE *********************************/
+%type images {Edje_Images *}
+images ::= images_start images_blocks.
+images_start ::= doc_comment(C) IMAGES.
+{
+   Edje_Images *i;
+
+   EDJE_CREATE;   
+   i = edje_images_new();
+   PARSER_APPEND(IMAGES, i, Edje_Images);
+   printf("Images: %p\n", i);
+   i->doc = C;
+}
+images_blocks ::= LB images_subblocks RB.
+images_subblocks ::= images_subblocks images_subblock.
+images_subblocks ::= images_subblock.
+images_subblock ::= PROPERTY(P) ID(I) compression.
+
+compression ::= 
+/******************************* END IMAGES CODE *********************************/
+/******************************* START GROUPS CODE *********************************/
+%type group {Edje_Group *}
+group ::= group_start group_block.
+group_start ::= doc_comment(C) GROUP.
+{
+   Edje_Group *g;
+
+   EDJE_CREATE;   
+   g = CURRENT = edje_group_new();
+   if (HEAD)
+     HEAD = eina_inlist_append(HEAD, EINA_INLIST_GET(g));
+   else
+     HEAD = EINA_INLIST_GET(g);
+   printf("Group: %p\n", g);
+   g->doc = C;
+}
+group_block ::= LB group_subblocks RB.
+group_subblocks ::= group_subblocks group_subblock.
+group_subblocks ::= group_subblock.
+group_subblock ::= group_property.
+group_property ::= PROPERTY(P) ID(I) SEMICOLON. /* property: "value"; */
+{
+   Edje_Group *g;
+
+   g = CURRENT;
+   printf("Group property - '%s':'%s'\n", P->text, I->text);
+   if (!strcmp(P->text, "alias:"))
+     g->alias = eina_stringshare_add_length(I->text + 1, strlen(I->text + 1) - 1);
+   else if (!strcmp(P->text, "name:"))
+     g->name = eina_stringshare_add_length(I->text + 1, strlen(I->text + 1) - 1);
+   else
+     ERROR_SYNTAX(P);
+
+   edje_parser_token_free(P);
+   edje_parser_token_free(I);
+}
+group_property ::= PROPERTY(P) INTEGER(I) SEMICOLON. /* property: bool */
+{
+   Edje_Group *g;
+   int i;
+
+   g = CURRENT;
+   printf("Group property - '%s':'%s'\n", P->text, I->text);
+   if (strcmp(P->text, "script_only:"))
+     {
+        ERROR_SYNTAX(P);
+        goto group_property_bool_out;
+     }
+   if (strlen(I->text) > 1)
+     {
+        ERROR_SYNTAX(I);
+        goto group_property_bool_out;
+     }
+
+   if (!edje_strtol(I->text, &i) || ((i != 1) && (i != 0)))
+     {
+        ERROR_RANGE(I);
+        goto group_property_bool_out;
+     }
+   g->script_only = !!i;
+
+group_property_bool_out:
+   edje_parser_token_free(P);
+   edje_parser_token_free(I);
+}
+
+group_property ::= PROPERTY(P) INTEGER(I) INTEGER(J) SEMICOLON. /* property: int int */
+{
+   Edje_Group *g;
+
+   g = CURRENT;
+   printf("Property: '%s'\n", P->text);
+   if (!strcmp(P->text, "min:"))
+     {
+
+        if ((!edje_strtol(I->text, &g->min[0])) || (g->min[0] < 0))
+          {
+             ERROR_RANGE(I);
+             goto group_property_int_out;
+          }
+        else if ((g->max[0] && (g->max[0] < g->min[0])) || (g->max[1] && (g->max[1] < g->min[1])))
+          {
+             ep->error = eina_stringshare_printf(
+               "Syntax error on line %d column %d: max cannot be smaller than min!\n",
+               I->sline + 1, I->scol + 1);
+             goto group_property_int_out; 
+          }
+        if ((!edje_strtol(J->text, &g->min[1])) || (g->min[1] < 0))
+          ERROR_RANGE(J);
+        else if ((g->max[0] < g->min[0]) || (g->max[1] < g->min[1]))
+          {
+             ep->error = eina_stringshare_printf(
+               "Syntax error on line %d column %d: max cannot be smaller than min!\n",
+               J->sline + 1, J->scol + 1);
+          }
+     }
+   else if (!strcmp(P->text, "max:"))
+     {
+        if ((!edje_strtol(I->text, &g->max[0])) || (g->max[0] < 0))
+          {
+             ERROR_RANGE(I);
+             goto group_property_int_out;
+          }
+        else if ((g->max[0] < g->min[0]) || (g->max[1] < g->min[1]))
+          {
+             ep->error = eina_stringshare_printf(
+               "Syntax error on line %d column %d: max cannot be smaller than min!\n",
+               I->sline + 1, I->scol + 1);
+             goto group_property_int_out; 
+          }
+        if ((!edje_strtol(J->text, &g->max[1])) || (g->max[1] < 1))
+          ERROR_RANGE(J);
+        else if ((g->max[0] < g->min[0]) || (g->max[1] < g->min[1]))
+          {
+             ep->error = eina_stringshare_printf(
+               "Syntax error on line %d column %d: max cannot be smaller than min!\n",
+               J->sline + 1, J->scol + 1);
+          }
+     }
+   else
+     ERROR_SYNTAX(P);
+     
+group_property_int_out:
+   edje_parser_token_free(P);
+   edje_parser_token_free(I);
+}
+/******************************* END GROUPS CODE *********************************/
+/******************************* START PARTS CODE *********************************/
+parts ::= PARTS LB parts_subblocks RB.
+
+parts_subblocks ::= parts_subblocks parts_subblock.
+parts_subblocks ::= parts_subblock.
+
+parts_subblock ::= color_classes.
+parts_subblock ::= parts_property.
+parts_subblock ::= sets.
+parts_subblock ::= images.
+parts_subblock ::= fonts.
+parts_subblock ::= styles.
+parts_subblock ::= part.
+parts_subblock ::= programs.
+
+/******************************* END PARTS CODE *********************************/
