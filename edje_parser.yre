@@ -231,13 +231,6 @@ collection_start ::= doc_comment(C) COLLECTIONS.
    c->doc = C;
 }
 collection_block ::= LB collections_subblocks RB.
-{
-   Edje_Collection *c;
-
-   c = PARSER_CURRENT(COLLECTION, Edje_Collection);
-   c->groups = EINA_INLIST_CONTAINER_GET(HEAD, Edje_Group);
-   CURRENT = HEAD = NULL;
-}
 collections_subblocks ::= collections_subblocks collections_subblock.
 collections_subblocks ::= collections_subblock.
 
@@ -245,8 +238,8 @@ collections_subblock ::= group.
 {
    Edje_Collection *c;
    c = PARSER_CURRENT(COLLECTION, Edje_Collection);
-   EDJE_STRUCT_APPEND(c, groups, HEAD, Edje_Group);
-   CURRENT = HEAD = NULL;
+   EDJE_STRUCT_APPEND(c, groups, EINA_INLIST_GET(GROUP), Edje_Group);
+   GROUP = NULL;
 }
 collections_subblock ::= color_classes.
 {
@@ -388,7 +381,7 @@ images_image_start ::= PROPERTY(P) ID(I).
    s = edje_set_image_new();
    PARSER_APPEND(SET_IMAGE, s, Edje_Set_Image);
    printf("Set image: %p\n", s);
-   s->filename = eina_stringshare_add_length(I->text + 1, strlen(I->text) - 2);
+   s->filename = eina_stringshare_add_length(I->text + 1, strlen(I->text + 1) - 1);
 
 images_image_out:
    edje_parser_token_free(P);
@@ -443,23 +436,49 @@ group_start ::= doc_comment(C) GROUP.
    Edje_Group *g;
 
    EDJE_CREATE;   
-   g = CURRENT = edje_group_new();
-   if (HEAD)
-     HEAD = eina_inlist_append(HEAD, EINA_INLIST_GET(g));
-   else
-     HEAD = EINA_INLIST_GET(g);
+   g = edje_group_new();
+   PARSER_APPEND(GROUP, g, Edje_Group);
    printf("Group: %p\n", g);
    g->doc = C;
 }
 group_block ::= LB group_subblocks RB.
+
+/*************************** GROUP SUB-BLOCKS ************************************/
 group_subblocks ::= group_subblocks group_subblock.
 group_subblocks ::= group_subblock.
+
+group_subblock ::= color_classes.
+{
+   Edje_Group *g;
+
+   g = PARSER_CURRENT(GROUP, Edje_Group);
+   EDJE_STRUCT_APPEND(g, color_classes, EINA_INLIST_GET(COLOR_CLASS), Edje_Color_Class);
+   COLOR_CLASS = NULL;
+}
+group_subblock ::= images.
+{
+   Edje_Group *g;
+
+   g = PARSER_CURRENT(GROUP, Edje_Group);
+   EDJE_STRUCT_APPEND(g, images, EINA_INLIST_GET(IMAGES), Edje_Images);
+   IMAGES = NULL;
+}
+group_subblock ::= parts.
+{
+   Edje_Group *g;
+
+   g = PARSER_CURRENT(GROUP, Edje_Group);
+   g->parts = PARTS; /* there can only be one parts{} in a group */
+   PARTS = NULL;
+}
 group_subblock ::= group_property.
+/*************************** END GROUP SUB-BLOCKS ********************************/
+/*************************** GROUP PROPERTY BLOCKS *******************************/
 group_property ::= PROPERTY(P) ID(I) SEMICOLON. /* property: "value"; */
 {
    Edje_Group *g;
 
-   g = CURRENT;
+   g = PARSER_CURRENT(GROUP, Edje_Group);
    printf("Group property - '%s':'%s'\n", P->text, I->text);
    if (!strcmp(P->text, "alias:"))
      g->alias = eina_stringshare_add_length(I->text + 1, strlen(I->text + 1) - 1);
@@ -476,7 +495,7 @@ group_property ::= PROPERTY(P) INTEGER(I) SEMICOLON. /* property: bool */
    Edje_Group *g;
    int i;
 
-   g = CURRENT;
+   g = GROUP;
    printf("Group property - '%s':'%s'\n", P->text, I->text);
    if (strcmp(P->text, "script_only:"))
      {
@@ -505,7 +524,7 @@ group_property ::= PROPERTY(P) INTEGER(I) INTEGER(J) SEMICOLON. /* property: int
 {
    Edje_Group *g;
 
-   g = CURRENT;
+   g = GROUP;
    printf("Property: '%s'\n", P->text);
    if (!strcmp(P->text, "min:"))
      {
@@ -561,23 +580,53 @@ group_property_int_out:
    edje_parser_token_free(P);
    edje_parser_token_free(I);
 }
+/*************************** END GROUP PROPERTY BLOCKS ***************************/
 /******************************* END GROUPS CODE *********************************/
-/******************************* START PARTS CODE *********************************/
-/*
-parts ::= PARTS LB parts_subblocks RB.
+/******************************* START PARTS CODE ********************************/
 
+parts ::= parts_start parts_block.
+parts_start ::= doc_comment(C) PARTS.
+{
+   Edje_Parts *p;
+
+   EDJE_CREATE;
+   p = edje_parts_new();
+   PARTS = p; // there can only be one at a time
+   printf("Parts: %p\n", p);
+   p->doc = C;
+}
+parts_block ::= LB parts_subblocks RB.
+/******************************* PARTS SUB-BLOCKS ********************************/
 parts_subblocks ::= parts_subblocks parts_subblock.
 parts_subblocks ::= parts_subblock.
 
+parts_subblock ::= parts_property.
+parts_property ::= PROPERTY(P) ID(A) ID(B).
+{
+   const char *b;
+   char *a;
+   if (strcmp(P->text, "aliases"))
+     {
+        ERROR_SYNTAX(P);
+        goto parts_property_out;
+     }
+
+   a = strndupa(A->text + 1, strlen(A->text + 1) - 1);
+   b = eina_stringshare_add_length(B->text + 1, strlen(B->text + 1) - 1);
+
+parts_property_out:
+   edje_parser_token_free(P);
+   edje_parser_token_free(A);
+   edje_parser_token_free(B);
+}
 parts_subblock ::= color_classes.
 parts_subblock ::= images.
 /*
-parts_subblock ::= parts_property.
 parts_subblock ::= sets.
 parts_subblock ::= fonts.
 parts_subblock ::= styles.
 parts_subblock ::= part.
 parts_subblock ::= programs.
 */
-
+/*************************** END PARTS SUB-BLOCKS *******************************/
 /******************************* END PARTS CODE *********************************/

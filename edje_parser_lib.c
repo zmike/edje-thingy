@@ -183,9 +183,6 @@ edje_parser_string_parse(const char  *str,
      {
         fprintf(stderr, "%s\n", parser->error);
         *err = EINA_TRUE;
-        edje_parser_stream_free(parser->stream);
-        free(parser);
-        return NULL;
      }
 
    ret = parser->edje;

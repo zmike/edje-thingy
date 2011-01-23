@@ -20,14 +20,20 @@
 
 #include <Eina.h>
 
-typedef enum
+#if !defined(strdupa)
+# define strdupa(str) strcpy(alloca(strlen(str) + 1), str)
+#endif
+#if !defined(strndupa)
+# define strndupa(str, len) strncpy(alloca(len + 1), str, len)
+#endif
+typedef enum Edje_Type
 {
   EDJE_TYPE_INT,
   EDJE_TYPE_DOUBLE,
   EDJE_TYPE_STR
 } Edje_Type;
 
-typedef enum
+typedef enum Edje_Compression_Type
 {
    EDJE_COMPRESSION_TYPE_RAW,
    EDJE_COMPRESSION_TYPE_COMP,
@@ -35,21 +41,21 @@ typedef enum
    EDJE_COMPRESSION_TYPE_USER
 } Edje_Compression_Type;
 
-typedef enum
+typedef enum Edje_Image_Middle
 {
    EDJE_IMAGE_MIDDLE_DEFAULT,
    EDJE_IMAGE_MIDDLE_NONE,
    EDJE_IMAGE_MIDDLE_SOLID
 } Edje_Image_Middle;
 
-typedef enum
+typedef enum Edje_Image_Scale_Hint
 {
    EDJE_IMAGE_SCALE_HINT_NONE,
    EDJE_IMAGE_SCALE_HINT_DYNAMIC,
    EDJE_IMAGE_SCALE_HINT_STATIC
 } Edje_Image_Scale_Hint;
 
-typedef struct
+typedef struct Edje_Style
 {
    EINA_INLIST;
    const char *doc;
@@ -58,7 +64,7 @@ typedef struct
    Eina_Hash *tags;
 } Edje_Style;
 
-typedef struct
+typedef struct Edje_Color_Class
 {
    EINA_INLIST;
    const char *doc;
@@ -68,7 +74,7 @@ typedef struct
    int color3[4];
 } Edje_Color_Class;
 
-typedef struct
+typedef struct Edje_Data
 {
    EINA_INLIST;
    const char *doc;
@@ -77,7 +83,7 @@ typedef struct
 } Edje_Data;
 
 
-typedef struct
+typedef struct Edje_Property
 {
    Edje_Type type;
    union
@@ -88,28 +94,14 @@ typedef struct
    } data;
 } Edje_Property;
 
-typedef struct
-{
-   EINA_INLIST;
-   const char *doc;
-   const char *name;
-   const char *alias;
-   int min[2];
-   int max[2];
-   Eina_Bool script_only : 1;
-   Edje_Color_Class *color_classes;
-   Edje_Data *data;
-   Edje_Style *styles;
-} Edje_Group;
-
-typedef struct
+typedef struct Edje_External
 {
    EINA_INLIST;
    const char *doc;
    const char *external;
 } Edje_External;
 
-typedef struct
+typedef struct Edje_Image
 {
    EINA_INLIST;
    const char *doc;
@@ -121,7 +113,7 @@ typedef struct
    Edje_Image_Scale_Hint scale_hint;
 } Edje_Image;
 
-typedef struct
+typedef struct Edje_Set_Image
 {
    EINA_INLIST;
    const char *filename;
@@ -130,7 +122,7 @@ typedef struct
    int size[4];
 } Edje_Set_Image;
 
-typedef struct
+typedef struct Edje_Set
 {
    EINA_INLIST;
    const char *doc;
@@ -138,7 +130,7 @@ typedef struct
    Edje_Set_Image *set_images;
 } Edje_Set;
 
-typedef struct
+typedef struct Edje_Images
 {
    EINA_INLIST;
    const char *doc;
@@ -146,7 +138,7 @@ typedef struct
    Edje_Set *sets;
 } Edje_Images;
 
-typedef struct
+typedef struct Edje_Font
 {
    EINA_INLIST;
    const char *doc;
@@ -154,7 +146,46 @@ typedef struct
    const char *alias;
 } Edje_Font;
 
-typedef struct
+typedef struct Edje_Part
+{
+   EINA_INLIST;
+   const char *doc;
+   Edje_Set_Image *set_images;
+   Edje_Set *sets;
+   Edje_Images *images;
+   Edje_Font *fonts;
+   Edje_Style *styles;
+} Edje_Part;
+
+typedef struct Edje_Parts
+{
+   const char *doc;
+   Eina_Hash *aliases;
+   Edje_Set_Image *set_images;
+   Edje_Set *sets;
+   Edje_Images *images;
+   Edje_Font *fonts;
+   Edje_Style *styles;
+   Edje_Part *parts;
+} Edje_Parts;
+
+typedef struct Edje_Group
+{
+   EINA_INLIST;
+   const char *doc;
+   const char *name;
+   const char *alias;
+   int min[2];
+   int max[2];
+   Eina_Bool script_only : 1;
+   Edje_Color_Class *color_classes;
+   Edje_Data *data;
+   Edje_Style *styles;
+   Edje_Images *images;
+   Edje_Parts *parts;
+} Edje_Group;
+
+typedef struct Edje_Collection
 {
    EINA_INLIST;
    const char *doc;
@@ -162,7 +193,7 @@ typedef struct
    Edje_Color_Class *color_classes;
 } Edje_Collection;
 
-typedef struct
+typedef struct Edje
 {
    Edje_Collection    *collections;
    Edje_External      *externals;
@@ -186,8 +217,10 @@ Edje_Data *edje_data_new(void);
 Edje_Color_Class *edje_color_class_new(void);
 Edje_Style *edje_style_new(void);
 Edje_Group *edje_group_new(void);
+Edje_Parts *edje_parts_new(void);
+Edje_Part *edje_part_new(void);
 Edje_Property *edje_property_new(Edje_Type type);
 
 const char *edje_stringshare_toupper(const char *str);
-
+Eina_Inlist *edje_inlist_join(Eina_Inlist *a, Eina_Inlist *b);
 #endif

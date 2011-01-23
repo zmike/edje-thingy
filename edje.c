@@ -43,6 +43,21 @@ edje_stringshare_toupper(const char *str)
    return eina_stringshare_add(tmp);
 }
 
+Eina_Inlist *
+edje_inlist_join(Eina_Inlist *a, Eina_Inlist *b)
+{
+   Eina_Inlist *l;
+   if (!a) return b;
+   if (!b) return a;
+
+   if (!a->last) return eina_inlist_prepend(b, a);
+   if (!b->last) return eina_inlist_append(a, b);
+
+   for (l = a->last, a->last = l->prev; l; l = a->last, a->last = l->prev)
+     b = eina_inlist_prepend(b, l);
+
+   return b;
+}
 
 #define DEF(TYPE, name) \
 TYPE * \
@@ -63,7 +78,19 @@ DEF(Edje_Font, edje_font)
 DEF(Edje_Data, edje_data)
 DEF(Edje_Style, edje_style)
 DEF(Edje_Group, edje_group)
+DEF(Edje_Part, edje_part)
 
+
+Edje_Parts *
+edje_parts_new(void)
+{
+   Edje_Parts *e;
+
+   e = calloc(1, sizeof(Edje_Parts));
+   EINA_SAFETY_ON_NULL_RETURN_VAL(e, NULL);
+   e->aliases = eina_hash_string_djb2_new((Eina_Free_Cb)eina_stringshare_del);
+   return e;
+}
 Edje_Property *
 edje_property_new(Edje_Type type)
 {

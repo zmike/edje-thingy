@@ -52,9 +52,9 @@ typedef struct
    Edje_Images *images;
    Edje_Set *set;
    Edje_Set_Image *set_image;
-   Eina_Inlist *head; /* head of current -v */
-   void *current; /* whatever we're working on */
-   void *subcurrent; /* subobject of current that we're working on */
+   Edje_Group *group;
+   Edje_Parts *parts;
+   Edje_Part *part;
 } Edje_Parser;
 
 typedef void      *(*Edje_Parser_New_Cb)(void *(*)(size_t));
