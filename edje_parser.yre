@@ -134,6 +134,7 @@ main:
 commentblock:
 /*!re2c
    "*/"                { NEXT; goto main; }
+  [\040-\176\t\n\r]   { NEXT; goto commentblock; }
   ENDINPUT             { RET(EDJE_UNKNOWN); }
   NONPRINT             { goto commentblock; }
 */
