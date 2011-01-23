@@ -122,13 +122,13 @@ edje_parser_parse(Edje_Parser *parser,
      return retval;
 
    s = parser->stream;
-   p = new_cb((void *(*)(size_t))malloc);
+   p = new_cb(malloc);
 
-   while ((t = token_cb(s)) != NULL)
+   while ((t = token_cb(s)))
      {
         if (t->type < 0)
           {
-             parser->error = eina_stringshare_printf("Unknown Edje_Token '%s' at line %d char %d\n", t->text, t->sline, t->scol);
+             parser->error = eina_stringshare_printf("Unknown token '%s' at line %d char %d\n", t->text, t->sline + 1, t->scol + 1);
              edje_parser_token_free(t);
              goto err;
           }

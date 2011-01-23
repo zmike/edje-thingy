@@ -55,6 +55,59 @@ typedef enum Edje_Image_Scale_Hint
    EDJE_IMAGE_SCALE_HINT_STATIC
 } Edje_Image_Scale_Hint;
 
+typedef enum Edje_Part_Type
+{
+   EDJE_PART_TYPE_RECT,
+   EDJE_PART_TYPE_TEXT,
+   EDJE_PART_TYPE_IMAGE,
+   EDJE_PART_TYPE_SWALLOW,
+   EDJE_PART_TYPE_TEXTBLOCK,
+   EDJE_PART_TYPE_GROUP,
+   EDJE_PART_TYPE_BOX,
+   EDJE_PART_TYPE_TABLE,
+   EDJE_PART_TYPE_EXTERNAL
+} Edje_Part_Type;
+
+typedef enum Edje_Part_Ignore_Flag
+{
+   EDJE_IGNORE_FLAG_NONE,
+   EDJE_IGNORE_FLAG_ON_HOLD
+} Edje_Part_Ignore_Flag;
+
+typedef enum Edje_Part_Pointer_Mode
+{
+   EDJE_POINTER_MODE_AUTOGRAB,
+   EDJE_POINTER_MODE_NOGRAB
+} Edje_Part_Pointer_Mode;
+
+typedef enum Edje_Part_Effect
+{
+   EDJE_PART_EFFECT_PLAIN,
+   EDJE_PART_EFFECT_OUTLINE,
+   EDJE_PART_EFFECT_SOFT_OUTLINE,
+   EDJE_PART_EFFECT_SHADOW,
+   EDJE_PART_EFFECT_SOFT_SHADOW,
+   EDJE_PART_EFFECT_OUTLINE_SHADOW,
+   EDJE_PART_EFFECT_OUTLINE_SOFT_SHADOW,
+   EDJE_PART_EFFECT_FAR_SHADOW,
+   EDJE_PART_EFFECT_FAR_SOFT_SHADOW,
+   EDJE_PART_EFFECT_GLOW
+} Edje_Part_Effect;
+
+typedef enum Edje_Part_Entry_Mode
+{
+   EDJE_PART_ENTRY_MODE_NONE,
+   EDJE_PART_ENTRY_MODE_PLAIN,
+   EDJE_PART_ENTRY_MODE_EDITABLE,
+   EDJE_PART_ENTRY_MODE_PASSWORD
+} Edje_Part_Entry_Mode;
+
+typedef enum Edje_Part_Select_Mode
+{
+   EDJE_PART_SELECT_MODE_DEFAULT,
+   EDJE_PART_SELECT_MODE_EXPLICIT_DEFAULT
+} Edje_Part_Select_Mode;
+
 typedef struct Edje_Style
 {
    EINA_INLIST;
@@ -81,7 +134,6 @@ typedef struct Edje_Data
    Eina_Hash *items;
    Eina_Hash *files;
 } Edje_Data;
-
 
 typedef struct Edje_Property
 {
@@ -150,7 +202,35 @@ typedef struct Edje_Part
 {
    EINA_INLIST;
    const char *doc;
+   const char *name;
+   const char *clip_to;
+   const char *source;
+   const char *source2;
+   const char *source3;
+   const char *source4;
+   const char *source5;
+   const char *source6;
+   Edje_Part_Ignore_Flag ignore_flags;
+   Edje_Part_Type type;
+   Edje_Part_Effect effect;
+   Edje_Part_Pointer_Mode pointer_mode;
+   Edje_Part_Entry_Mode entry_mode;
+   Edje_Part_Select_Mode select_mode;
+   Eina_Bool mouse_events : 1;
+   Eina_Bool repeat_events : 1;
+   Eina_Bool scale : 1;
+   Eina_Bool precise_is_inside : 1;
+   Eina_Bool use_alternate_font_metrics : 1;
+   Eina_Bool multiline : 1;
+   struct
+   {
+      const char *confine;
+      const char *events;
+      int x[3];
+      int y[3];
+   } dragable;
    Edje_Set_Image *set_images;
+   Edje_Color_Class *color_classes;
    Edje_Set *sets;
    Edje_Images *images;
    Edje_Font *fonts;
@@ -162,6 +242,7 @@ typedef struct Edje_Parts
    const char *doc;
    Eina_Hash *aliases;
    Edje_Set_Image *set_images;
+   Edje_Color_Class *color_classes;
    Edje_Set *sets;
    Edje_Images *images;
    Edje_Font *fonts;

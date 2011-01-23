@@ -8,6 +8,7 @@
 #define SET_IMAGE   ep->set_image
 #define GROUP       ep->group
 #define PARTS       ep->parts
+#define PART       ep->part
 
 #define EDJE        ep->edje
 #define EDJE_CREATE if (!EDJE) EDJE = edje_new()

@@ -20,7 +20,6 @@ color_classes {
    }
 }
    group { name: "main";
-/*
       parts {
          /* white background */
          part { name: "bg";
@@ -83,6 +82,5 @@ color_classes {
             target: "rect";
          }
       }
-*/
    }
 }
