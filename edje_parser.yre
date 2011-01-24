@@ -488,6 +488,7 @@ program_subblock ::= PROPERTY(P) ID(I) SEMICOLON.
    Edje_Program *p;
 
    p = PARSER_CURRENT(PROGRAM, Edje_Program);
+   DBG("Program property - '%s' '%s'", P->text, I->text);
    if (!strcmp(P->text, "name:"))
      STRINGSHARE_REPLACE_NOQUOTES(p->name, I->text);
    else if (!strcmp(P->text, "signal:"))
@@ -507,6 +508,7 @@ program_subblock ::= PROPERTY(P) ID(I) ID(J) SEMICOLON.
    Edje_Program *p;
 
    p = PARSER_CURRENT(PROGRAM, Edje_Program);
+   DBG("Program property - '%s' '%s' '%s'", P->text, I->text, J->text);
    if (!strcmp(P->text, "api:"))
      {
         STRINGSHARE_REPLACE_NOQUOTES(p->api.name, I->text);
@@ -527,6 +529,7 @@ program_subblock ::= PROPERTY(P) NUMBER(I) NUMBER(J) SEMICOLON.
    Edje_Program *p;
 
    p = PARSER_CURRENT(PROGRAM, Edje_Program);
+   DBG("Program property - '%s' '%s' '%s'", P->text, I->text, J->text);
    if (!strcmp(P->text, "in:"))
      {
         if (!edje_parser_strtod(I->text, &p->in.from))

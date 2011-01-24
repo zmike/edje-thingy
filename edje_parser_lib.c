@@ -290,6 +290,7 @@ edje_parser_parse(Edje_Parser        *parser,
         if (t->type < 0)
           {
              parser->error = eina_stringshare_printf("Unknown token '%s' at line %d char %d\n", t->text, t->sline + 1, t->scol + 1);
+             ERR("%s", parser->error);
              edje_parser_token_free(t);
              goto err;
           }
