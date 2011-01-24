@@ -79,7 +79,7 @@ DEF(Edje_Data, edje_data)
 DEF(Edje_Style, edje_style)
 DEF(Edje_Group, edje_group)
 DEF(Edje_Part, edje_part)
-
+DEF(Edje_Part_Description, edje_part_description)
 
 Edje_Parts *
 edje_parts_new(void)

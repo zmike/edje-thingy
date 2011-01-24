@@ -81,9 +81,6 @@ extern void        edje_parser_Trace(FILE *,
    "part"             { RET(EDJE_PART); }
 
    
-
-   [-]?[0-9]*[.]?[0-9]* { RET(EDJE_DOUBLE); }
-
    ":"                { RET(EDJE_COLON); }
 
    "."                { RET(EDJE_DOT); }
@@ -112,6 +109,7 @@ main:
    "collections"      { RET(EDJE_COLLECTIONS); }
    "color_classes"    { RET(EDJE_COLOR_CLASSES); }
    "color_class"      { RET(EDJE_COLOR_CLASS); }
+   "description"      { RET(EDJE_DESCRIPTION); }
    "parts"            { RET(EDJE_PARTS); }
    "part"             { RET(EDJE_PART); }
    "group"            { RET(EDJE_GROUP); }
@@ -123,6 +121,7 @@ main:
    "{"                { RET(EDJE_LB); }
    "}"                { RET(EDJE_RB); }
 
+   D"."[0-9]+        { RET(EDJE_DOUBLE); }
    D                  { RET(EDJE_INTEGER); }
 
    ";"                { RET(EDJE_SEMICOLON); }
@@ -150,17 +149,6 @@ commentblock:
    {
       return edje_parser_file_parse(path, err, edje_parser_, edje_parser_Alloc, edje_parser_Free, edje_parser_stream_to_token);
    }
-
-   /* handle errno more easily */
-   static Eina_Bool edje_parser_strtol(const char *text, int *i)
-   {
-        errno = 0;
-        *i = strtol(text, NULL, 10);
-        if (errno) return EINA_FALSE;
-
-        return EINA_TRUE;
-   }
-
 }
 
 edje ::= toplevel_blocks.
@@ -283,59 +271,24 @@ color_class_property ::= PROPERTY ID(I) SEMICOLON.
 }
 color_class_property ::= PROPERTY(P) INTEGER(I) INTEGER(J) INTEGER(K) INTEGER(L) SEMICOLON.
 {
-   size_t len;
-   int *color, i;
-   const char *text[4];
+
    Edje_Color_Class *c;
+   int *colors[3];
+   Edje_Token *tokens[4];
 
    c = PARSER_CURRENT(COLOR_CLASS, Edje_Color_Class);
 
-   text[0] = I->text;
-   text[1] = J->text;
-   text[2] = K->text;
-   text[3] = L->text;
    printf("Color class property: %s:%s %s %s %s\n", P->text, I->text, J->text, K->text, L->text);
-   len = strlen(P->text); /* check for color*: */
-   if ((len < 6) || (len > 7) || (strncmp(P->text, "color", 5)))
-     {
-        ERROR_SYNTAX(P);
-        goto color_class_property_out;
-     }
-   if ((len == 7) && ((P->text[5] != '2') && (P->text[5] != '3')))
-     {
-        ERROR_SYNTAX(P);
-        goto color_class_property_out;
-     }
-   if (len == 6) /* color: */
-     color = c->color;
-   else if (P->text[5] == '2') /* color2: */
-     color = c->color2;
-   else /* color3: */
-     color = c->color3;
+   tokens[0] = I;
+   tokens[1] = J;
+   tokens[2] = K;
+   tokens[3] = L;
+   colors[0] = c->color;
+   colors[1] = c->color2;
+   colors[2] = c->color3;
+   if (!edje_parser_parse_color(ep, P, (Edje_Token**)tokens, (int**)colors) && (!ep->error))
+     ERROR_SYNTAX(P);
 
-   for (i = 0; i < 4; i++)
-     {
-        if (!edje_parser_strtol(text[i], &color[i]) || (color[i] < 0) || (color[i] > 255))
-          {
-             switch (i)
-               {
-                case 0:
-                  ERROR_RANGE(I);
-                  break;
-                case 1:
-                  ERROR_RANGE(J);
-                  break;
-                case 2:
-                  ERROR_RANGE(K);
-                  break;
-                default:
-                  ERROR_RANGE(L);
-               }
-             break;
-          }
-     }
-   
-color_class_property_out:
    edje_parser_token_free(P);
    edje_parser_token_free(I);
    edje_parser_token_free(J);
@@ -386,7 +339,7 @@ images_image_start ::= PROPERTY(P) ID(I).
    s = edje_set_image_new();
    PARSER_APPEND(SET_IMAGE, s, Edje_Set_Image);
    printf("Set image: %p\n", s);
-   s->filename = eina_stringshare_add_length(I->text + 1, strlen(I->text + 1) - 1);
+   s->filename = STRINGSHARE_NOQUOTES(I->text);
 
 images_image_out:
    edje_parser_token_free(P);
@@ -486,9 +439,9 @@ group_property ::= PROPERTY(P) ID(I) SEMICOLON. /* property: "value"; */
    g = PARSER_CURRENT(GROUP, Edje_Group);
    printf("Group property - '%s':'%s'\n", P->text, I->text);
    if (!strcmp(P->text, "alias:"))
-     g->alias = eina_stringshare_add_length(I->text + 1, strlen(I->text + 1) - 1);
+     g->alias = STRINGSHARE_NOQUOTES(I->text);
    else if (!strcmp(P->text, "name:"))
-     g->name = eina_stringshare_add_length(I->text + 1, strlen(I->text + 1) - 1);
+     g->name = STRINGSHARE_NOQUOTES(I->text);
    else
      ERROR_SYNTAX(P);
 
@@ -507,13 +460,7 @@ group_property ::= PROPERTY(P) INTEGER(I) SEMICOLON. /* property: bool */
         ERROR_SYNTAX(P);
         goto group_property_bool_out;
      }
-   if (strlen(I->text) > 1)
-     {
-        ERROR_SYNTAX(I);
-        goto group_property_bool_out;
-     }
-
-   if (!edje_parser_strtol(I->text, &i) || ((i != 1) && (i != 0)))
+   if (!edje_parser_strtobool(I->text, &i))
      {
         ERROR_RANGE(I);
         goto group_property_bool_out;
@@ -533,50 +480,13 @@ group_property ::= PROPERTY(P) INTEGER(I) INTEGER(J) SEMICOLON. /* property: int
    printf("Property: '%s'\n", P->text);
    if (!strcmp(P->text, "min:"))
      {
-
-        if ((!edje_parser_strtol(I->text, &g->min[0])) || (g->min[0] < 0))
-          {
-             ERROR_RANGE(I);
-             goto group_property_int_out;
-          }
-        else if ((g->max[0] && (g->max[0] < g->min[0])) || (g->max[1] && (g->max[1] < g->min[1])))
-          {
-             ep->error = eina_stringshare_printf(
-               "Syntax error on line %d column %d: max cannot be smaller than min!\n",
-               I->sline + 1, I->scol + 1);
-             goto group_property_int_out; 
-          }
-        if ((!edje_parser_strtol(J->text, &g->min[1])) || (g->min[1] < 0))
-          ERROR_RANGE(J);
-        else if ((g->max[0] < g->min[0]) || (g->max[1] < g->min[1]))
-          {
-             ep->error = eina_stringshare_printf(
-               "Syntax error on line %d column %d: max cannot be smaller than min!\n",
-               J->sline + 1, J->scol + 1);
-          }
+        if (!edje_parser_parse_min(ep, I, J, (int**)&g->min, (int**)&g->max))
+          goto group_property_int_out;
      }
    else if (!strcmp(P->text, "max:"))
      {
-        if ((!edje_parser_strtol(I->text, &g->max[0])) || (g->max[0] < 0))
-          {
-             ERROR_RANGE(I);
-             goto group_property_int_out;
-          }
-        else if ((g->max[0] < g->min[0]) || (g->max[1] < g->min[1]))
-          {
-             ep->error = eina_stringshare_printf(
-               "Syntax error on line %d column %d: max cannot be smaller than min!\n",
-               I->sline + 1, I->scol + 1);
-             goto group_property_int_out; 
-          }
-        if ((!edje_parser_strtol(J->text, &g->max[1])) || (g->max[1] < 1))
-          ERROR_RANGE(J);
-        else if ((g->max[0] < g->min[0]) || (g->max[1] < g->min[1]))
-          {
-             ep->error = eina_stringshare_printf(
-               "Syntax error on line %d column %d: max cannot be smaller than min!\n",
-               J->sline + 1, J->scol + 1);
-          }
+        if (!edje_parser_parse_max(ep, I, J, (int**)&g->min, (int**)&g->max))
+          goto group_property_int_out;
      }
    else
      ERROR_SYNTAX(P);
@@ -616,7 +526,7 @@ parts_property ::= PROPERTY(P) ID(A) ID(B).
      }
 
    a = strndupa(A->text + 1, strlen(A->text + 1) - 1);
-   b = eina_stringshare_add_length(B->text + 1, strlen(B->text + 1) - 1);
+   b = STRINGSHARE_NOQUOTES(B->text);
 
 parts_property_out:
    edje_parser_token_free(P);
@@ -674,6 +584,186 @@ part_subblock ::= images.
    EDJE_STRUCT_APPEND(PART, images, EINA_INLIST_GET(IMAGES), Edje_Images);
    IMAGES = NULL;
 }
+part_subblock ::= part_description.
+{
+   EDJE_STRUCT_APPEND(PART, descriptions, EINA_INLIST_GET(DESCRIPTION), Edje_Part_Description);
+   DESCRIPTION = NULL;
+}
+/************************** START DESCRIPTION CODE ******************************/
+part_description ::= part_description_start part_description_block.
+part_description_start ::= doc_comment(C) DESCRIPTION.
+{
+   Edje_Part_Description *p;
+
+   EDJE_CREATE;
+   p = edje_part_description_new();
+   PARSER_APPEND(DESCRIPTION, p, Edje_Part_Description);
+   printf("Part_Description: %p\n", p);
+   p->doc = C;
+}
+part_description_block ::= LB part_description_subblocks RB.
+/******************************* DESC SUB-BLOCKS ********************************/
+part_description_subblocks ::= part_description_subblocks part_description_subblock.
+part_description_subblocks ::= part_description_subblock.
+
+part_description_subblock ::= color_classes.
+{
+   EDJE_STRUCT_APPEND(DESCRIPTION, color_classes, EINA_INLIST_GET(COLOR_CLASS), Edje_Color_Class);
+   COLOR_CLASS = NULL;
+}
+part_description_subblock ::= images.
+{
+   EDJE_STRUCT_APPEND(DESCRIPTION, imageses, EINA_INLIST_GET(IMAGES), Edje_Images);
+   IMAGES = NULL;
+}
+part_description_subblock ::= part_description_property.
+part_description_property ::= PROPERTY(P) ID(I) SEMICOLON.
+{
+    Edje_Part_Description *p;
+
+    p = PARSER_CURRENT(DESCRIPTION, Edje_Part_Description);
+    printf("Desc property - '%s':'%s'\n", P->text, I->text);
+
+    if (!strcmp(P->text, "color_class:")) \
+      p->color_class = STRINGSHARE_NOQUOTES(I->text);
+   else ERROR_SYNTAX(P);
+
+   edje_parser_token_free(P);
+   edje_parser_token_free(I);
+}
+part_description_property ::= PROPERTY(P) INTEGER(I) SEMICOLON.
+{
+    Edje_Part_Description *p;
+    int i;
+
+    p = PARSER_CURRENT(DESCRIPTION, Edje_Part_Description);
+    printf("Desc property - '%s':'%s'\n", P->text, I->text);
+
+   if (!edje_parser_strtobool(I->text, &i))
+     {
+        ERROR_RANGE(I);
+        goto part_description_property_bool_out;
+     }
+
+   if (!strcmp(P->text, "visible:"))
+     p->visible = !!i;
+   else ERROR_SYNTAX(P);
+
+part_description_property_bool_out:
+   edje_parser_token_free(P);
+   edje_parser_token_free(I);
+}
+part_description_property ::= PROPERTY(P) ID(I) DOUBLE(D) SEMICOLON.
+{
+    Edje_Part_Description *p;
+    float d;
+
+    p = PARSER_CURRENT(DESCRIPTION, Edje_Part_Description);
+    printf("Desc property - '%s':'%s %s'\n", P->text, I->text, D->text);
+
+    if (!edje_parser_strtof(D->text, &d) || (d < 0.0) || (d > 1.0))
+      {
+         ERROR_RANGE(D);
+         goto part_description_property_state_out;
+      }
+
+    if (!strcmp(P->text, "inherit:"))
+      {
+         p->inherit.name = STRINGSHARE_NOQUOTES(I->text);
+         p->inherit.index = d;
+      }
+    else if (!strcmp(P->text, "state:"))
+      {
+         p->state.name = STRINGSHARE_NOQUOTES(I->text);
+         p->state.index = d;
+      }
+    else ERROR_SYNTAX(P);
+
+part_description_property_state_out:
+    edje_parser_token_free(P);
+    edje_parser_token_free(I);
+    edje_parser_token_free(D);
+}
+part_description_property ::= PROPERTY(P) INTEGER(I) INTEGER(J) SEMICOLON.
+{
+    Edje_Part_Description *p;
+    int i, j;
+
+    p = PARSER_CURRENT(DESCRIPTION, Edje_Part_Description);
+    printf("Desc property - '%s':'%s %s'\n", P->text, I->text, J->text);
+
+   if (!strcmp(P->text, "fixed:"))
+     {
+        if (!edje_parser_strtobool(I->text, &i))
+          {
+             ERROR_RANGE(I);
+             goto part_desc_subblock_bool_out;
+          }
+        if (!edje_parser_strtobool(J->text, &j))
+          {
+             ERROR_RANGE(J);
+             goto part_desc_subblock_bool_out;
+          }
+        p->fixed[0] = !!i;
+        p->fixed[1] = !!j;
+     }
+   else if (!strcmp(P->text, "min:"))
+     {
+        if (!edje_parser_parse_min(ep, I, J, (int**)&p->min, (int**)&p->max))
+          goto part_desc_subblock_bool_out;
+     }
+   else if (!strcmp(P->text, "max:"))
+     {
+        if (!edje_parser_parse_max(ep, I, J, (int**)&p->min, (int**)&p->max))
+          goto part_desc_subblock_bool_out;
+     }
+   else if (!strcmp(P->text, "step:"))
+     {
+        if (!edje_parser_strtol(I->text, &i) || (i < 0))
+          {
+             ERROR_RANGE(I);
+             goto part_desc_subblock_bool_out;
+          }
+        if (!edje_parser_strtol(I->text, &j) || (j < 0))
+          {
+             ERROR_RANGE(J);
+             goto part_desc_subblock_bool_out;
+          }
+        p->step[0] = i;
+        p->step[1] = j;
+     }
+   else ERROR_SYNTAX(P);
+part_desc_subblock_bool_out:
+   edje_parser_token_free(P);
+   edje_parser_token_free(I);
+}
+part_description_property ::= PROPERTY(P) INTEGER(I) INTEGER(J) INTEGER(K) INTEGER(L) SEMICOLON.
+{
+   Edje_Part_Description *p;
+   int *colors[3];
+   Edje_Token *tokens[4];
+
+   p = PARSER_CURRENT(DESCRIPTION, Edje_Part_Description);
+   printf("Part desc property: %s:%s %s %s %s\n", P->text, I->text, J->text, K->text, L->text);
+   tokens[0] = I;
+   tokens[1] = J;
+   tokens[2] = K;
+   tokens[3] = L;
+   colors[0] = p->color;
+   colors[1] = p->color2;
+   colors[2] = p->color3;
+   if (!edje_parser_parse_color(ep, P, (Edje_Token**)tokens, (int**)colors) && (!ep->error))
+     ERROR_SYNTAX(P);
+
+   edje_parser_token_free(P);
+   edje_parser_token_free(I);
+   edje_parser_token_free(J);
+   edje_parser_token_free(K);
+   edje_parser_token_free(L);
+}
+/******************************* END DESC SUB-BLOCKS ****************************/
+/************************** END DESCRIPTION CODE ********************************/
+/******************************* START PART CODE ********************************/
 part_subblock ::= part_property.
 part_property ::= PROPERTY(P) ID(I) SEMICOLON.
 {
@@ -683,7 +773,7 @@ part_property ::= PROPERTY(P) ID(I) SEMICOLON.
    printf("Part property - '%s':'%s'\n", P->text, I->text);
 #define EDJE_PART_CHECK(TYPE) \
 if (!strcmp(P->text, #TYPE":")) \
-  p->TYPE = eina_stringshare_add_length(I->text + 1, strlen(I->text + 1) - 1)
+  p->TYPE = STRINGSHARE_NOQUOTES(I->text)
   
    EDJE_PART_CHECK(clip_to);
    else EDJE_PART_CHECK(name);
@@ -794,12 +884,7 @@ part_property ::= PROPERTY(P) INTEGER(I) SEMICOLON.
    p = PARSER_CURRENT(PART, Edje_Part);
    printf("Part property - '%s':'%s'\n", P->text, I->text);
 
-   if (strlen(I->text) > 1)
-     {
-        ERROR_SYNTAX(I);
-        goto part_property_bool_out;
-     }
-   if (!edje_parser_strtol(I->text, &i) || ((i != 1) && (i != 0)))
+   if (!edje_parser_strtobool(I->text, &i))
      {
         ERROR_RANGE(I);
         goto part_property_bool_out;
