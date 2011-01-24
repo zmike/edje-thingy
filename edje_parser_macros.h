@@ -16,6 +16,7 @@
 #define PROGRAM     ep->program
 #define PROGRAMS    ep->programs
 #define EXTERNAL    ep->external
+#define DATA        ep->data
 
 #define EDJE        ep->edje
 #define EDJE_CREATE if (!EDJE) EDJE = edje_new()

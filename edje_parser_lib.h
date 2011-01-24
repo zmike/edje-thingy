@@ -49,6 +49,7 @@ typedef struct
    const char                     *error;
 
    Edje_Part_Description_Relative *rel;
+   Edje_Data                      *data;
    Edje_Fonts                     *fonts;
    Edje_Font                      *font;
    Edje_Part_Description          *description;

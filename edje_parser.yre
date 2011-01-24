@@ -86,6 +86,7 @@ main:
 
    "collections"      { RET(EDJE_COLLECTIONS); }
    "externals"        { RET(EDJE_EXTERNALS); }
+   "data"             { RET(EDJE_DATA); }
    "color_classes"    { RET(EDJE_COLOR_CLASSES); }
    "color_class"      { RET(EDJE_COLOR_CLASS); }
    "description"      { RET(EDJE_DESCRIPTION); }
@@ -187,6 +188,12 @@ toplevel_block ::= externals.
    EDJE_APPEND(externals, EXTERNAL, Edje_External);
    EXTERNAL = NULL;
 }
+toplevel_block ::= data.
+{
+   EDJE_CREATE;
+   EDJE_APPEND(data, DATA, Edje_Data);
+   DATA = NULL;
+}
 /*
 toplevel_block ::= sets_block(B).
 {
@@ -194,11 +201,7 @@ toplevel_block ::= sets_block(B).
    EDJE_APPEND(sets);
 }
 
-toplevel_block ::= data_block(B).
-{
-   EDJE_CREATE;
-   EDJE_APPEND(data);
-}
+
 toplevel_block ::= styles_block(B).
 {
    EDJE_CREATE;
@@ -290,7 +293,39 @@ collections_subblock ::= fonts.
    FONTS = NULL;
 }
 /******************************* END COLLECTIONS CODE ***********************************/
-/******************************* START EXTERNALS CODE ***************************************/
+/******************************** START DATA CODE ***************************************/
+data ::= data_start data_block.
+data_start ::= doc_comment DATA.
+data_block ::= LB data_subblocks RB.
+data_block ::= DOT data_subblock.
+data_subblocks ::= data_subblocks data_subblock.
+data_subblocks ::= data_subblock.
+
+data_subblock ::= PROPERTY(P) ID(I) ID(J) SEMICOLON.
+{
+   Edje_Data *d;
+
+   if (!strcmp(P->text, "item:"))
+     {
+        d = edje_data_new();
+        eina_hash_add(d->items, strndupa(I->text + 1, strlen(I->text + 1) - 1),
+          eina_stringshare_add_length(J->text + 1, strlen(J->text + 1) - 1));
+        PARSER_APPEND(DATA, d, Edje_Data);
+     }
+   else if (!strcmp(P->text, "file:"))
+     {
+        d = edje_data_new();
+        eina_hash_add(d->files, strndupa(I->text + 1, strlen(I->text + 1) - 1),
+          eina_stringshare_add_length(J->text + 1, strlen(J->text + 1) - 1));
+        PARSER_APPEND(DATA, d, Edje_Data);
+     }
+   else ERROR_SYNTAX(P);
+
+   edje_parser_token_free(P);
+   edje_parser_token_free(I);
+}
+/********************************* END DATA CODE ****************************************/
+/******************************* START EXTERNALS CODE ***********************************/
 externals ::= externals_start externals_block.
 externals_start ::= doc_comment EXTERNALS.
 externals_block ::= LB externals_subblocks RB.
@@ -922,6 +957,14 @@ group_subblock ::= externals.
    g = PARSER_CURRENT(GROUP, Edje_Group);
    EDJE_STRUCT_APPEND(g, externals, EXTERNAL, Edje_External);
    EXTERNAL = NULL;
+}
+group_subblock ::= data.
+{
+   Edje_Group *g;
+
+   g = PARSER_CURRENT(GROUP, Edje_Group);
+   EDJE_STRUCT_APPEND(g, data, DATA, Edje_Data);
+   DATA = NULL;
 }
 group_subblock ::= script(S).
 {
