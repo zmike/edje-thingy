@@ -50,8 +50,9 @@ edje_inlist_join(Eina_Inlist *a, Eina_Inlist *b)
    if (!a) return b;
    if (!b) return a;
 
-   if (!a->last) return eina_inlist_prepend(b, a);
-   if (!b->last) return eina_inlist_append(a, b);
+   if ((!a->last) && (!b->last)) return eina_inlist_append(a, b);
+   if ((!a->last) && b->last) return eina_inlist_prepend(b, a);
+   if ((!b->last) && a->last) return eina_inlist_append(a, b);
 
    for (l = a->last, a->last = l->prev; l; l = a->last, a->last = l->prev)
      b = eina_inlist_prepend(b, l);
