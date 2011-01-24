@@ -48,6 +48,8 @@ typedef struct
    Edje_Stream           *stream;
    const char            *error;
    Edje_Part_Description_Relative *rel;
+   Edje_Fonts *fonts;
+   Edje_Font *font;
    Edje_Part_Description *description;
    Edje_Collection       *collection; /* current collection */
    Edje_Color_Class      *color_class;

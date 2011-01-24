@@ -103,13 +103,13 @@ main:
    SLCOM              { NEXT; goto main; }
    "/*"               { goto commentblock; }
    [ \t\n\r]+         { NEXT; goto main; }
-   "\""[\040-\176]+"\"" { RET(EDJE_ID); }
-   ([a-z]N+)":"       { RET(EDJE_PROPERTY); }
 
    "collections"      { RET(EDJE_COLLECTIONS); }
    "color_classes"    { RET(EDJE_COLOR_CLASSES); }
    "color_class"      { RET(EDJE_COLOR_CLASS); }
    "description"      { RET(EDJE_DESCRIPTION); }
+   "fonts"            { RET(EDJE_FONTS); }
+   "font"             { RET(EDJE_FONT); }
    "rel1"             { RET(EDJE_REL1); }
    "rel2"             { RET(EDJE_REL2); }
    "parts"            { RET(EDJE_PARTS); }
@@ -119,6 +119,9 @@ main:
    "COMP"             { RET(EDJE_COMP); }
    "LOSSY"            { RET(EDJE_LOSSY); }
    "USER"             { RET(EDJE_USER); }
+   "\""[\040-\176]+"\"" { RET(EDJE_ID); }
+   ([a-z]N+)":"       { RET(EDJE_PROPERTY); }
+
    [A-Z]+             { RET(EDJE_CAPS); }
    "{"                { RET(EDJE_LB); }
    "}"                { RET(EDJE_RB); }
@@ -127,6 +130,7 @@ main:
    D                  { RET(EDJE_INTEGER); }
 
    ";"                { RET(EDJE_SEMICOLON); }
+   ":"                { RET(EDJE_COLON); }
    "."                { RET(EDJE_DOT); }
    ENDINPUT           { RET(EDJE_EOF); }
    NONPRINT           { RET(EDJE_UNKNOWN); }
@@ -167,10 +171,15 @@ toplevel_block ::= collection.
 toplevel_block ::= images.
 {
    EDJE_CREATE;
-   EDJE_APPEND(images, IMAGES, Edje_Images);
+   EDJE_APPEND(imageses, IMAGES, Edje_Images);
    IMAGES = NULL;
 }
-
+toplevel_block ::= fonts.
+{
+   EDJE_CREATE;
+   EDJE_APPEND(fontses, FONTS, Edje_Fonts);
+   FONTS = NULL;
+}
 /*
 toplevel_block ::= externals_block(B).
 {
@@ -182,11 +191,7 @@ toplevel_block ::= sets_block(B).
    EDJE_CREATE;
    EDJE_APPEND(sets);
 }
-toplevel_block ::= fonts_block(B).
-{
-   EDJE_CREATE;
-   EDJE_APPEND(fonts);
-}
+
 toplevel_block ::= data_block(B).
 {
    EDJE_CREATE;
@@ -244,7 +249,64 @@ collections_subblock ::= color_classes.
    EDJE_STRUCT_APPEND(c, color_classes, EINA_INLIST_GET(COLOR_CLASS), Edje_Color_Class);
    COLOR_CLASS = NULL;
 }
-/******************************* END COLLECTIONS CODE *********************************/
+collections_subblock ::= images.
+{
+   Edje_Collection *c;
+   c = PARSER_CURRENT(COLLECTION, Edje_Collection);
+   EDJE_STRUCT_APPEND(c, imageses, EINA_INLIST_GET(IMAGES), Edje_Images);
+   IMAGES = NULL;
+}
+collections_subblock ::= fonts.
+{
+   Edje_Collection *c;
+   c = PARSER_CURRENT(COLLECTION, Edje_Collection);
+   EDJE_STRUCT_APPEND(c, fontses, EINA_INLIST_GET(FONTS), Edje_Fonts);
+   FONTS = NULL;
+}
+/******************************* END COLLECTIONS CODE ***********************************/
+/******************************* START FONTS CODE ***************************************/
+fonts ::= fonts_start fonts_block.
+fonts_start ::= doc_comment(C) FONTS.
+{
+   Edje_Fonts *f;
+
+   EDJE_CREATE;
+   f = edje_fonts_new();
+   PARSER_APPEND(FONTS, f, Edje_Fonts);
+   printf("Fonts: %p\n", f);
+   f->doc = C;
+}
+fonts_block ::= LB fonts_subblocks RB.
+fonts_block ::= DOT fonts_subblock.
+fonts_subblocks ::= fonts_subblocks fonts_subblock.
+fonts_subblocks ::= fonts_subblock.
+
+fonts_subblock ::= font.
+{
+   Edje_Fonts *f;
+
+   f = PARSER_CURRENT(FONTS, Edje_Fonts);
+   EDJE_STRUCT_APPEND(f, fonts, EINA_INLIST_GET(FONT), Edje_Font);
+   FONT = NULL;
+}
+/******************************* END FONTS CODE *****************************************/
+/******************************* START FONT CODE ****************************************/
+font ::= doc_comment(C) FONT COLON ID(I) ID(J) SEMICOLON.
+{
+   Edje_Font *f;
+
+   f = edje_font_new();
+   PARSER_APPEND(FONT, f, Edje_Font);
+   printf("Font: %p\n", f);
+   f->doc = C;
+
+   STRINGSHARE_REPLACE_NOQUOTES(f->name, I->text);
+   STRINGSHARE_REPLACE_NOQUOTES(f->alias, J->text);
+
+   edje_parser_token_free(I);
+   edje_parser_token_free(J);
+}
+/******************************* END FONT CODE ******************************************/
 /******************************* START COLOR_CLASS CODE *********************************/
 color_classes ::= color_classes_start color_classes_block.
 color_classes_start ::= doc_comment COLOR_CLASSES.
@@ -403,6 +465,7 @@ group_start ::= doc_comment(C) GROUP.
    g->doc = C;
 }
 group_block ::= LB group_subblocks RB.
+group_block ::= DOT group_subblocks.
 
 /*************************** GROUP SUB-BLOCKS ************************************/
 group_subblocks ::= group_subblocks group_subblock.
@@ -421,8 +484,24 @@ group_subblock ::= images.
    Edje_Group *g;
 
    g = PARSER_CURRENT(GROUP, Edje_Group);
-   EDJE_STRUCT_APPEND(g, images, EINA_INLIST_GET(IMAGES), Edje_Images);
+   EDJE_STRUCT_APPEND(g, imageses, EINA_INLIST_GET(IMAGES), Edje_Images);
    IMAGES = NULL;
+}
+group_subblock ::= fonts.
+{
+   Edje_Group *g;
+
+   g = PARSER_CURRENT(GROUP, Edje_Group);
+   EDJE_STRUCT_APPEND(g, fontses, EINA_INLIST_GET(FONTS), Edje_Fonts);
+   FONTS = NULL;
+}
+group_subblock ::= font.
+{
+   Edje_Group *g;
+
+   g = PARSER_CURRENT(GROUP, Edje_Group);
+   EDJE_STRUCT_APPEND(g, fonts, EINA_INLIST_GET(FONT), Edje_Font);
+   FONT = NULL;
 }
 group_subblock ::= parts.
 {
@@ -432,6 +511,7 @@ group_subblock ::= parts.
    g->parts = PARTS; /* there can only be one parts{} in a group */
    PARTS = NULL;
 }
+
 group_subblock ::= group_property.
 /*************************** END GROUP SUB-BLOCKS ********************************/
 /*************************** GROUP PROPERTY BLOCKS *******************************/
@@ -517,6 +597,17 @@ parts_block ::= LB parts_subblocks RB.
 parts_subblocks ::= parts_subblocks parts_subblock.
 parts_subblocks ::= parts_subblock.
 
+parts_subblock ::= fonts.
+{
+   EDJE_STRUCT_APPEND(PARTS, fontses, EINA_INLIST_GET(FONTS), Edje_Fonts);
+   FONTS = NULL;
+}
+parts_subblock ::= font.
+{
+   EDJE_STRUCT_APPEND(PARTS, fonts, EINA_INLIST_GET(FONT), Edje_Font);
+   FONT = NULL;
+}
+
 parts_subblock ::= parts_property.
 parts_property ::= PROPERTY(P) ID(A) ID(B).
 {
@@ -543,7 +634,7 @@ parts_subblock ::= color_classes.
 }
 parts_subblock ::= images.
 {
-   EDJE_STRUCT_APPEND(PARTS, images, EINA_INLIST_GET(IMAGES), Edje_Images);
+   EDJE_STRUCT_APPEND(PARTS, imageses, EINA_INLIST_GET(IMAGES), Edje_Images);
    IMAGES = NULL;
 }
 parts_subblock ::= part.
@@ -577,19 +668,44 @@ part_block ::= LB part_subblocks RB.
 part_subblocks ::= part_subblocks part_subblock.
 part_subblocks ::= part_subblock.
 
+part_subblock ::= fonts.
+{
+   Edje_Part *p;
+
+   p = PARSER_CURRENT(PART, Edje_Part);
+   EDJE_STRUCT_APPEND(p, fontses, EINA_INLIST_GET(FONTS), Edje_Fonts);
+   FONTS = NULL;
+}
+part_subblock ::= font.
+{
+   Edje_Part *p;
+
+   p = PARSER_CURRENT(PART, Edje_Part);
+   EDJE_STRUCT_APPEND(p, fonts, EINA_INLIST_GET(FONT), Edje_Font);
+   FONT = NULL;
+}
 part_subblock ::= color_classes.
 {
-   EDJE_STRUCT_APPEND(PART, color_classes, EINA_INLIST_GET(COLOR_CLASS), Edje_Color_Class);
+   Edje_Part *p;
+
+   p = PARSER_CURRENT(PART, Edje_Part);
+   EDJE_STRUCT_APPEND(p, color_classes, EINA_INLIST_GET(COLOR_CLASS), Edje_Color_Class);
    COLOR_CLASS = NULL;
 }
 part_subblock ::= images.
 {
-   EDJE_STRUCT_APPEND(PART, images, EINA_INLIST_GET(IMAGES), Edje_Images);
+   Edje_Part *p;
+
+   p = PARSER_CURRENT(PART, Edje_Part);
+   EDJE_STRUCT_APPEND(p, imageses, EINA_INLIST_GET(IMAGES), Edje_Images);
    IMAGES = NULL;
 }
 part_subblock ::= part_description.
 {
-   EDJE_STRUCT_APPEND(PART, descriptions, EINA_INLIST_GET(DESCRIPTION), Edje_Part_Description);
+   Edje_Part *p;
+
+   p = PARSER_CURRENT(PART, Edje_Part);
+   EDJE_STRUCT_APPEND(p, descriptions, EINA_INLIST_GET(DESCRIPTION), Edje_Part_Description);
    DESCRIPTION = NULL;
 }
 /************************** START DESCRIPTION CODE ******************************/
@@ -611,13 +727,35 @@ part_description_subblocks ::= part_description_subblock.
 
 part_description_subblock ::= color_classes.
 {
-   EDJE_STRUCT_APPEND(DESCRIPTION, color_classes, EINA_INLIST_GET(COLOR_CLASS), Edje_Color_Class);
+   Edje_Part_Description *p;
+
+   p = PARSER_CURRENT(DESCRIPTION, Edje_Part_Description);
+   EDJE_STRUCT_APPEND(p, color_classes, EINA_INLIST_GET(COLOR_CLASS), Edje_Color_Class);
    COLOR_CLASS = NULL;
 }
 part_description_subblock ::= images.
 {
-   EDJE_STRUCT_APPEND(DESCRIPTION, imageses, EINA_INLIST_GET(IMAGES), Edje_Images);
+   Edje_Part_Description *p;
+
+   p = PARSER_CURRENT(DESCRIPTION, Edje_Part_Description);
+   EDJE_STRUCT_APPEND(p, imageses, EINA_INLIST_GET(IMAGES), Edje_Images);
    IMAGES = NULL;
+}
+part_description_subblock ::= fonts.
+{
+   Edje_Part_Description *p;
+
+   p = PARSER_CURRENT(DESCRIPTION, Edje_Part_Description);
+   EDJE_STRUCT_APPEND(p, fontses, EINA_INLIST_GET(FONTS), Edje_Fonts);
+   FONTS = NULL;
+}
+part_description_subblock ::= font.
+{
+   Edje_Part_Description *p;
+
+   p = PARSER_CURRENT(DESCRIPTION, Edje_Part_Description);
+   EDJE_STRUCT_APPEND(p, fonts, EINA_INLIST_GET(FONT), Edje_Font);
+   FONT = NULL;
 }
 part_description_subblock ::= part_description_property.
 part_description_property ::= PROPERTY(P) ID(I) SEMICOLON.
@@ -727,7 +865,7 @@ part_description_property ::= PROPERTY(P) INTEGER(I) INTEGER(J) SEMICOLON.
              ERROR_RANGE(I);
              goto part_desc_subblock_bool_out;
           }
-        if (!edje_parser_strtol(I->text, &j) || (j < 0))
+        if (!edje_parser_strtol(J->text, &j) || (j < 0))
           {
              ERROR_RANGE(J);
              goto part_desc_subblock_bool_out;

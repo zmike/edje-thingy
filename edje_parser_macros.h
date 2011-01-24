@@ -11,6 +11,8 @@
 #define PART        ep->part
 #define DESCRIPTION ep->description
 #define REL         ep->rel
+#define FONT        ep->font
+#define FONTS       ep->fonts
 
 #define EDJE        ep->edje
 #define EDJE_CREATE if (!EDJE) EDJE = edje_new()
