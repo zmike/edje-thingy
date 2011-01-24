@@ -99,6 +99,7 @@ main:
    "rel1"             { RET(EDJE_REL1); }
    "rel2"             { RET(EDJE_REL2); }
    "parts"            { RET(EDJE_PARTS); }
+   "params"           { RET(EDJE_PARAMS); }
    "part"             { RET(EDJE_PART); }
    "group"            { RET(EDJE_GROUP); }
    "RAW"              { RET(EDJE_RAW); }
@@ -1352,6 +1353,103 @@ part_description_property ::= PROPERTY(P) NUMBER(I) NUMBER(J) NUMBER(K) NUMBER(L
    edje_parser_token_free(K);
    edje_parser_token_free(L);
 }
+/*************************************** PARAMS ******************************************/
+part_description_subblock ::= part_description_params.
+part_description_params ::= part_description_params_start part_description_params_block.
+part_description_params_start ::= PARAMS.
+part_description_params_block ::= LB part_description_params_subblocks RB.
+part_description_params_block ::= DOT part_description_params_subblock.
+part_description_params_subblocks ::= part_description_params_subblocks part_description_params_subblock.
+part_description_params_subblocks ::= part_description_params_subblock.
+
+part_description_params_subblock ::= part_description_param.
+part_description_param ::= PROPERTY(P) ID(I) ID(J) SEMICOLON.
+{
+   Edje_Part_Description *p;
+   Edje_Param *e;
+   Eina_Bool str = EINA_FALSE;
+
+   if (!strcmp(P->text, "string:"))
+     str = EINA_TRUE;
+   else if (strcmp(P->text, "choice:"))
+     {
+        ERROR_SYNTAX(P);
+        goto part_description_param_str_out;
+     }
+
+   p = PARSER_CURRENT(DESCRIPTION, Edje_Part_Description);
+   e = edje_param_new();
+   if (str)
+     e->type = EDJE_PARAM_TYPE_STRING;
+   else
+     e->type = EDJE_PARAM_TYPE_CHOICE;
+
+   STRINGSHARE_REPLACE_NOQUOTES(e->data.s, J->text);
+   eina_hash_add(p->params, I->text, e);
+
+part_description_param_str_out:
+   edje_parser_token_free(P);
+   edje_parser_token_free(I);
+   edje_parser_token_free(J);
+}
+part_description_param ::= PROPERTY(P) ID(I) NUMBER(J) SEMICOLON.
+{
+   Edje_Part_Description *p;
+   Edje_Param *e;
+   int i;
+
+   if (!strcmp(P->text, "int:"))
+     i = 0;
+   else if (!strcmp(P->text, "double:"))
+     i = 1;
+   else if (!strcmp(P->text, "bool:"))
+     i = 2;
+   else
+     {
+        ERROR_SYNTAX(P);
+        goto part_description_param_num_out;
+     }
+
+   p = PARSER_CURRENT(DESCRIPTION, Edje_Part_Description);
+   e = edje_param_new();
+   switch (i)
+     {
+      case 0:
+        e->type = EDJE_PARAM_TYPE_INT;
+        if (!edje_parser_strtol(J->text, &e->data.i))
+          {
+             free(e);
+             ERROR_RANGE(J);
+             goto part_description_param_num_out;
+          }
+        break;
+      case 1:
+        e->type = EDJE_PARAM_TYPE_DOUBLE;
+        if (!edje_parser_strtod(J->text, &e->data.d))
+          {
+             free(e);
+             ERROR_RANGE(J);
+             goto part_description_param_num_out;
+          }
+        break;
+      case 2:
+        e->type = EDJE_PARAM_TYPE_BOOL;
+        if (!edje_parser_strtobool(J->text, &i))
+          {
+             free(e);
+             ERROR_RANGE(J);
+             goto part_description_param_num_out;
+          }
+        e->data.b = !!i;
+        break;
+     }
+   eina_hash_add(p->params, I->text, e);
+
+part_description_param_num_out:
+   edje_parser_token_free(P);
+   edje_parser_token_free(I);
+   edje_parser_token_free(J);
+}
 /************************************ PERSPECTIVE ****************************************/
 part_description_subblock ::= part_description_perspective.
 part_description_perspective ::= part_description_perspective_start part_description_perspective_block.
@@ -1580,9 +1678,9 @@ part_description_reltwo_start ::= REL2.
    REL = &p->rel[1];
 }
 part_description_rel_props ::= LB relative_properties RB.
-relative_properties ::= relative_properties relative_property.
-relative_properties ::= relative_property relative_property.
 part_description_rel_props ::= DOT relative_property.
+relative_properties ::= relative_properties relative_property.
+relative_properties ::= relative_property.
 relative_property ::= PROPERTY(P) NUMBER(I) NUMBER(J) SEMICOLON.
 {
    if (!strcmp(P->text, "offset:"))
@@ -1594,9 +1692,9 @@ relative_property ::= PROPERTY(P) NUMBER(I) NUMBER(J) SEMICOLON.
      }
    else if (!strcmp(P->text, "relative:"))
      {
-        if (!edje_parser_strtof(I->text, &REL->relative[0]))
+        if (!edje_parser_strtod(I->text, &REL->relative[0]))
           ERROR_RANGE(I);
-        else if (!edje_parser_strtof(J->text, &REL->relative[1]))
+        else if (!edje_parser_strtod(J->text, &REL->relative[1]))
           ERROR_RANGE(J);
      }
    else ERROR_SYNTAX(P);

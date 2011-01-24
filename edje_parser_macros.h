@@ -67,7 +67,7 @@
          {                                                                                 \
             eina_stringshare_del(ep->error);                                               \
             ep->error = eina_stringshare_printf(                                           \
-                "Syntax error on line %d column %d: unexpected token %s:'%s'\n",           \
+                "Syntax error on line %d column %d: unexpected token %s: '%s'\n",           \
                 TOKEN->sline + 1, TOKEN->scol + 1, yyTokenName[TOKEN->type], TOKEN->text); \
          }                                                                                 \
        ERR("%s", ep->error);                                                               \

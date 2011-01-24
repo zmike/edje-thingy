@@ -53,7 +53,9 @@ Edje_Part *edje_part_new(void);
 Edje_Part_Description *edje_part_description_new(void);
 Edje_Program *edje_program_new(void);
 Edje_Programs *edje_programs_new(void);
+Edje_Param *edje_param_new(void);
 
+void edje_param_free(Edje_Param *e);
 const char *edje_stringshare_toupper(const char *str);
 Eina_Inlist *edje_inlist_join(Eina_Inlist *a, Eina_Inlist *b);
 #endif

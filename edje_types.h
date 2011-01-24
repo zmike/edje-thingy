@@ -3,6 +3,15 @@
 
 #include <Eina.h>
 
+typedef enum Edje_Param_Type
+{
+   EDJE_PARAM_TYPE_INT,
+   EDJE_PARAM_TYPE_DOUBLE,
+   EDJE_PARAM_TYPE_STRING,
+   EDJE_PARAM_TYPE_BOOL,
+   EDJE_PARAM_TYPE_CHOICE
+} Edje_Param_Type;
+
 typedef enum Edje_Compression_Type
 {
    EDJE_COMPRESSION_TYPE_RAW,
@@ -256,12 +265,24 @@ typedef struct Edje_Programs
 
 typedef struct Edje_Part_Description_Relative
 {
-   float relative[2];
+   double relative[2];
    int offset[2];
    const char *to;
    const char *to_x;
    const char *to_y;
 } Edje_Part_Description_Relative;
+
+typedef struct Edje_Param
+{
+   Edje_Param_Type type;
+   union
+   {
+      int i;
+      double d;
+      const char *s;
+      Eina_Bool b;
+   } data;
+} Edje_Param;
 
 typedef struct Edje_Part_Description
 {
@@ -332,6 +353,7 @@ typedef struct Edje_Part_Description
    int color[4];
    int color2[4];
    int color3[4];
+   Eina_Hash *params; /* Edje_Param */
    Edje_Fonts *fontses;
    Edje_Font *fonts;
    Edje_Image *images;

@@ -80,9 +80,37 @@ DEF(Edje_Data, edje_data)
 DEF(Edje_Style, edje_style)
 DEF(Edje_Group, edje_group)
 DEF(Edje_Part, edje_part)
-DEF(Edje_Part_Description, edje_part_description)
+DEF(Edje_Param, edje_param)
 DEF(Edje_Program, edje_program)
 DEF(Edje_Programs, edje_programs)
+
+void
+edje_param_free(Edje_Param *e)
+{
+   if (!e) return;
+
+   switch (e->type)
+     {
+      case EDJE_PARAM_TYPE_STRING:
+      case EDJE_PARAM_TYPE_CHOICE:
+        eina_stringshare_del(e->data.s);
+        break;
+      default:
+        break;
+     }
+   free(e);
+}
+
+Edje_Part_Description *
+edje_part_description_new(void)
+{
+   Edje_Part_Description *e;
+
+   e = calloc(1, sizeof(Edje_Part_Description));
+   EINA_SAFETY_ON_NULL_RETURN_VAL(e, NULL);
+   e->params = eina_hash_string_djb2_new((Eina_Free_Cb)edje_param_free);
+   return e;
+}
 
 Edje_Parts *
 edje_parts_new(void)
