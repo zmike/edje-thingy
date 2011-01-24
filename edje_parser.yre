@@ -113,6 +113,8 @@ main:
    "map"              { RET(EDJE_MAP); }
    "rotation"         { RET(EDJE_ROTATION); }
    "perspective"      { RET(EDJE_PERSPECTIVE); }
+   "programs"         { RET(EDJE_PROGRAMS); }
+   "program"          { RET(EDJE_PROGRAM); }
    "font"             { RET(EDJE_FONT); }
    "rel1"             { RET(EDJE_REL1); }
    "rel2"             { RET(EDJE_REL2); }
@@ -123,10 +125,10 @@ main:
    "COMP"             { RET(EDJE_COMP); }
    "LOSSY"            { RET(EDJE_LOSSY); }
    "USER"             { RET(EDJE_USER); }
-   "\""[\040-\176]+"\"" { RET(EDJE_ID); }
+   "\""[\043-\176 !]+"\"" { RET(EDJE_ID); }
    ([a-z]N+)":"       { RET(EDJE_PROPERTY); }
 
-   [A-Z]+             { RET(EDJE_CAPS); }
+   [A-Z_]+             { RET(EDJE_CAPS); }
    "{"                { RET(EDJE_LB); }
    "}"                { RET(EDJE_RB); }
 
@@ -218,7 +220,7 @@ toplevel_block ::= color_classes.
 doc_comment(Y) ::= . {Y = NULL;}
 doc_comment(Y) ::= DOC(X).
 {
-   printf("Comment: %s\n", X->text);
+   DBG("Comment: %s", X->text);
    Y = X->text;
    X->text = NULL;
    edje_parser_token_free(X);
@@ -232,7 +234,7 @@ collection_start ::= doc_comment(C) COLLECTIONS.
    EDJE_CREATE;
    c = edje_collection_new();
    PARSER_APPEND(COLLECTION, c, Edje_Collection);
-   printf("Collection: %p\n", c);
+   DBG("Collection: %p", c);
    c->doc = C;
 }
 collection_block ::= LB collections_subblocks RB.
@@ -277,7 +279,7 @@ fonts_start ::= doc_comment(C) FONTS.
    EDJE_CREATE;
    f = edje_fonts_new();
    PARSER_APPEND(FONTS, f, Edje_Fonts);
-   printf("Fonts: %p\n", f);
+   DBG("Fonts: %p", f);
    f->doc = C;
 }
 fonts_block ::= LB fonts_subblocks RB.
@@ -301,7 +303,7 @@ font ::= doc_comment(C) FONT COLON ID(I) ID(J) SEMICOLON.
 
    f = edje_font_new();
    PARSER_APPEND(FONT, f, Edje_Font);
-   printf("Font: %p\n", f);
+   DBG("Font: %p", f);
    f->doc = C;
 
    STRINGSHARE_REPLACE_NOQUOTES(f->name, I->text);
@@ -334,7 +336,7 @@ color_class_property ::= PROPERTY ID(I) SEMICOLON.
    Edje_Color_Class *c;
 
    c = PARSER_CURRENT(COLOR_CLASS, Edje_Color_Class);
-   printf("Color class name: %s\n", I->text);
+   DBG("Color class name: %s", I->text);
    c->name = eina_stringshare_add(I->text);
    edje_parser_token_free(I);
 }
@@ -347,7 +349,7 @@ color_class_property ::= PROPERTY(P) INTEGER(I) INTEGER(J) INTEGER(K) INTEGER(L)
 
    c = PARSER_CURRENT(COLOR_CLASS, Edje_Color_Class);
 
-   printf("Color class property: %s:%s %s %s %s\n", P->text, I->text, J->text, K->text, L->text);
+   DBG("Color class property: %s:%s %s %s %s", P->text, I->text, J->text, K->text, L->text);
    tokens[0] = I;
    tokens[1] = J;
    tokens[2] = K;
@@ -365,6 +367,340 @@ color_class_property ::= PROPERTY(P) INTEGER(I) INTEGER(J) INTEGER(K) INTEGER(L)
    edje_parser_token_free(L);
 }
 /******************************* END COLOR_CLASS CODE *********************************/
+/******************************* START PROGRAMS CODE **********************************/
+programs ::= programs_start programs_blocks.
+programs_start ::= doc_comment(C) PROGRAMS.
+{
+   Edje_Programs *p;
+
+   EDJE_CREATE;   
+   p = edje_programs_new();
+   PARSER_APPEND(PROGRAMS, p, Edje_Programs);
+   DBG("Programs: %p", p);
+   p->doc = C;
+}
+programs_blocks ::= LB programs_subblocks RB.
+programs_blocks ::= DOT programs_subblock.
+programs_subblocks ::= programs_subblocks programs_subblock.
+programs_subblocks ::= programs_subblock.
+
+programs_subblock ::= program.
+{
+   Edje_Programs *p;
+
+   p = PARSER_CURRENT(PROGRAMS, Edje_Programs);
+   EDJE_STRUCT_APPEND(p, programs, EINA_INLIST_GET(PROGRAM), Edje_Program);
+   PROGRAM = NULL;
+}
+/*
+programs_subblock ::= image.
+{
+   Edje_Programs *p;
+
+   p = PARSER_CURRENT(PROGRAMS, Edje_Programs);
+   EDJE_STRUCT_APPEND(p, images, EINA_INLIST_GET(IMAGE), Edje_Image);
+   IMAGE = NULL;
+}
+*/
+programs_subblock ::= images.
+{
+   Edje_Programs *p;
+
+   p = PARSER_CURRENT(PROGRAMS, Edje_Programs);
+   EDJE_STRUCT_APPEND(p, imageses, EINA_INLIST_GET(IMAGES), Edje_Images);
+   IMAGES = NULL;
+}
+programs_subblock ::= font.
+{
+   Edje_Programs *p;
+
+   p = PARSER_CURRENT(PROGRAMS, Edje_Programs);
+   EDJE_STRUCT_APPEND(p, fonts, EINA_INLIST_GET(FONT), Edje_Font);
+   FONT = NULL;
+}
+programs_subblock ::= fonts.
+{
+   Edje_Programs *p;
+
+   p = PARSER_CURRENT(PROGRAMS, Edje_Programs);
+   EDJE_STRUCT_APPEND(p, fontses, EINA_INLIST_GET(FONTS), Edje_Fonts);
+   FONTS = NULL;
+}
+/*programs_subblocks ::= set.*/
+/******************************** END PROGRAMS CODE **********************************/
+/******************************** START PROGRAM CODE **********************************/
+program ::= program_start program_blocks.
+program_start ::= doc_comment(C) PROGRAM.
+{
+   Edje_Program *p;
+
+   EDJE_CREATE;   
+   p = edje_program_new();
+   PARSER_APPEND(PROGRAM, p, Edje_Program);
+   DBG("Program: %p", p);
+   p->doc = C;
+}
+program_blocks ::= LB program_subblocks RB.
+program_blocks ::= DOT program_subblock.
+program_subblocks ::= program_subblocks program_subblock.
+program_subblocks ::= program_subblock.
+
+program_subblock ::= PROPERTY(P) ID(I) SEMICOLON.
+{
+   Edje_Program *p;
+
+   p = PARSER_CURRENT(PROGRAM, Edje_Program);
+   if (!strcmp(P->text, "name:"))
+     STRINGSHARE_REPLACE_NOQUOTES(p->name, I->text);
+   else if (!strcmp(P->text, "signal:"))
+     STRINGSHARE_REPLACE_NOQUOTES(p->signal, I->text);
+   else if (!strcmp(P->text, "source:"))
+     STRINGSHARE_REPLACE_NOQUOTES(p->source, I->text);
+   else if (!strcmp(P->text, "target:"))
+     p->targets = eina_list_append(p->targets, eina_stringshare_add_length(I->text + 1, strlen(I->text + 1) - 1));
+   else if (!strcmp(P->text, "after:"))
+     p->targets = eina_list_append(p->after, eina_stringshare_add_length(I->text + 1, strlen(I->text + 1) - 1));
+   else ERROR_SYNTAX(P);
+   edje_parser_token_free(P);
+   edje_parser_token_free(I);
+}
+program_subblock ::= PROPERTY(P) ID(I) ID(J) SEMICOLON.
+{
+   Edje_Program *p;
+
+   p = PARSER_CURRENT(PROGRAM, Edje_Program);
+   if (!strcmp(P->text, "api:"))
+     {
+        STRINGSHARE_REPLACE_NOQUOTES(p->api.name, I->text);
+        STRINGSHARE_REPLACE_NOQUOTES(p->api.description, J->text);
+     }
+   if (!strcmp(P->text, "filter:"))
+     {
+        STRINGSHARE_REPLACE_NOQUOTES(p->filter.part, I->text);
+        STRINGSHARE_REPLACE_NOQUOTES(p->filter.state, J->text);
+     }
+   else ERROR_SYNTAX(P);
+   edje_parser_token_free(P);
+   edje_parser_token_free(I);
+   edje_parser_token_free(J);
+}
+program_subblock ::= PROPERTY(P) FLOAT(I) FLOAT(J) SEMICOLON.
+{
+   Edje_Program *p;
+
+   p = PARSER_CURRENT(PROGRAM, Edje_Program);
+   if (!strcmp(P->text, "in:"))
+     {
+        if (!edje_parser_strtod(I->text, &p->in.from))
+          ERROR_RANGE(I);
+        else if (!edje_parser_strtod(J->text, &p->in.range))
+          ERROR_RANGE(J);
+     }
+   else ERROR_SYNTAX(P);
+   edje_parser_token_free(P);
+   edje_parser_token_free(I);
+   edje_parser_token_free(J);
+}
+program_subblock ::= PROPERTY(P) CAPS(C) SEMICOLON.
+{
+   Edje_Program *p;
+
+   p = PARSER_CURRENT(PROGRAM, Edje_Program);
+   if (!strcmp(P->text, "action:") && (!p->action.type))
+     {
+         if (!strcmp(C->text, "ACTION_STOP"))
+           p->action.type = EDJE_PROGRAM_ACTION_ACTION_STOP;
+         else if (!strcmp(C->text, "FOCUS_SET"))
+           p->action.type = EDJE_PROGRAM_ACTION_FOCUS_SET;
+         else if (!strcmp(C->text, "FOCUS_OBJECT"))
+           p->action.type = EDJE_PROGRAM_ACTION_FOCUS_OBJECT;
+         else ERROR_SYNTAX(C);
+     }
+   else ERROR_SYNTAX(P);
+   edje_parser_token_free(P);
+   edje_parser_token_free(C);
+}
+program_subblock ::= PROPERTY(P) CAPS(C) FLOAT(I) FLOAT(J) SEMICOLON.
+{
+   Edje_Program *p;
+
+   p = PARSER_CURRENT(PROGRAM, Edje_Program);
+   if (!strcmp(P->text, "action:") && (!p->action.type))
+     {
+         if (!strcmp(C->text, "DRAG_VAL_SET"))
+           p->action.type = EDJE_PROGRAM_ACTION_DRAG_VAL_SET;
+         else if (!strcmp(C->text, "DRAG_VAL_STEP"))
+           p->action.type = EDJE_PROGRAM_ACTION_DRAG_VAL_STEP;
+         else if (!strcmp(C->text, "DRAG_VAL_PAGE"))
+           p->action.type = EDJE_PROGRAM_ACTION_DRAG_VAL_PAGE;
+
+         if (!p->action.type) ERROR_SYNTAX(C);
+         else if (!edje_parser_strtof(I->text, (float*)&p->action.params.numbers[0]))
+           ERROR_RANGE(I);
+         else if (!edje_parser_strtof(J->text, (float*)&p->action.params.numbers[1]))
+           ERROR_RANGE(J);
+     }
+   else ERROR_SYNTAX(P);
+   edje_parser_token_free(P);
+   edje_parser_token_free(C);
+   edje_parser_token_free(I);
+   edje_parser_token_free(J);
+}
+program_subblock ::= PROPERTY(P) CAPS(C) ID(I) FLOAT(J) SEMICOLON.
+{
+   Edje_Program *p;
+
+   p = PARSER_CURRENT(PROGRAM, Edje_Program);
+   if (!strcmp(P->text, "action:") && (!p->action.type))
+     {
+         if (!strcmp(C->text, "STATE_SET"))
+           p->action.type = EDJE_PROGRAM_ACTION_STATE_SET;
+
+         if (!p->action.type) ERROR_SYNTAX(C);
+         else if (!edje_parser_strtof(J->text, (float*)&p->action.params.numbers[0]))
+           ERROR_RANGE(J);
+         else
+           p->action.params.strings =
+             eina_list_append(p->action.params.strings,
+               eina_stringshare_add_length(I->text + 1, strlen(I->text + 1) - 1)
+             );
+     }
+   else ERROR_SYNTAX(P);
+   edje_parser_token_free(P);
+   edje_parser_token_free(C);
+   edje_parser_token_free(I);
+   edje_parser_token_free(J);
+}
+program_subblock ::= PROPERTY(P) CAPS(C) ID(I) ID(J) SEMICOLON.
+{
+   Edje_Program *p;
+
+   p = PARSER_CURRENT(PROGRAM, Edje_Program);
+   if (!strcmp(P->text, "action:") && (!p->action.type))
+     {
+         if (!strcmp(C->text, "SIGNAL_EMIT"))
+           p->action.type = EDJE_PROGRAM_ACTION_SIGNAL_EMIT;
+
+         if (!p->action.type) ERROR_SYNTAX(C);
+         else
+           {
+              p->action.params.strings =
+                eina_list_append(p->action.params.strings,
+                  eina_stringshare_add_length(I->text + 1, strlen(I->text + 1) - 1)
+                );
+              p->action.params.strings =
+                eina_list_append(p->action.params.strings,
+                  eina_stringshare_add_length(J->text + 1, strlen(J->text + 1) - 1)
+                );  
+           }
+     }
+   else ERROR_SYNTAX(P);
+   edje_parser_token_free(P);
+   edje_parser_token_free(C);
+   edje_parser_token_free(I);
+   edje_parser_token_free(J);
+}
+program_subblock ::= PROPERTY(P) CAPS(C) ID(I) ID(J) ID(K) SEMICOLON.
+{
+   Edje_Program *p;
+
+   p = PARSER_CURRENT(PROGRAM, Edje_Program);
+   if (!strcmp(P->text, "action:") && (!p->action.type))
+     {
+         if (!strcmp(C->text, "PARAM_SET"))
+           p->action.type = EDJE_PROGRAM_ACTION_PARAM_SET;
+
+         if (!p->action.type) ERROR_SYNTAX(C);
+         else
+           {
+              p->action.params.strings =
+                eina_list_append(p->action.params.strings,
+                  eina_stringshare_add_length(I->text + 1, strlen(I->text + 1) - 1)
+                );
+              p->action.params.strings =
+                eina_list_append(p->action.params.strings,
+                  eina_stringshare_add_length(J->text + 1, strlen(J->text + 1) - 1)
+                );
+              p->action.params.strings =
+                eina_list_append(p->action.params.strings,
+                  eina_stringshare_add_length(K->text + 1, strlen(K->text + 1) - 1)
+                );
+           }
+     }
+   else ERROR_SYNTAX(P);
+   edje_parser_token_free(P);
+   edje_parser_token_free(C);
+   edje_parser_token_free(I);
+   edje_parser_token_free(J);
+   edje_parser_token_free(K);
+}
+program_subblock ::= PROPERTY(P) CAPS(C) ID(I) ID(J) ID(K) ID(L) SEMICOLON.
+{
+   Edje_Program *p;
+
+   p = PARSER_CURRENT(PROGRAM, Edje_Program);
+   if (!strcmp(P->text, "action:") && (!p->action.type))
+     {
+         if (!strcmp(C->text, "PARAM_COPY"))
+           p->action.type = EDJE_PROGRAM_ACTION_PARAM_COPY;
+
+         if (!p->action.type) ERROR_SYNTAX(C);
+         else
+           {
+              p->action.params.strings =
+                eina_list_append(p->action.params.strings,
+                  eina_stringshare_add_length(I->text + 1, strlen(I->text + 1) - 1)
+                );
+              p->action.params.strings =
+                eina_list_append(p->action.params.strings,
+                  eina_stringshare_add_length(J->text + 1, strlen(J->text + 1) - 1)
+                );
+              p->action.params.strings =
+                eina_list_append(p->action.params.strings,
+                  eina_stringshare_add_length(K->text + 1, strlen(K->text + 1) - 1)
+                );
+              p->action.params.strings =
+                eina_list_append(p->action.params.strings,
+                  eina_stringshare_add_length(L->text + 1, strlen(L->text + 1) - 1)
+                );
+           }
+     }
+   else ERROR_SYNTAX(P);
+   edje_parser_token_free(P);
+   edje_parser_token_free(C);
+   edje_parser_token_free(I);
+   edje_parser_token_free(J);
+   edje_parser_token_free(K);
+   edje_parser_token_free(L);
+}
+program_subblock ::= PROPERTY(P) CAPS(C) FLOAT(I) SEMICOLON.
+{
+   Edje_Program *p;
+
+   p = PARSER_CURRENT(PROGRAM, Edje_Program);
+   if (!strcmp(P->text, "transition:") && (!p->action.transition.length) && (!p->action.transition.type)) /* error on double set */
+     {
+#define EDJE_ACTION_CHECK(NAME) \
+  if (!strcmp(C->text, #NAME)) \
+    p->action.transition.type = EDJE_PROGRAM_TRANSITION_##NAME
+
+        EDJE_ACTION_CHECK(LINEAR);
+        else EDJE_ACTION_CHECK(SINUSOIDAL);
+        else EDJE_ACTION_CHECK(ACCELERATE);
+        else EDJE_ACTION_CHECK(DECELERATE);
+        
+        if (!p->action.transition.type)
+          ERROR_SYNTAX(I);
+        else if (!edje_parser_strtof(I->text, (float*)&p->action.transition.length))
+          ERROR_RANGE(I);
+#undef EDJE_ACTION_CHECK
+     }
+   else ERROR_SYNTAX(P);
+   edje_parser_token_free(P);
+   edje_parser_token_free(C);
+   edje_parser_token_free(I);
+}
+/******************************** END PROGRAM CODE **********************************/
 /******************************* START IMAGES CODE *********************************/
 
 images ::= images_start images_blocks.
@@ -375,10 +711,11 @@ images_start ::= doc_comment(C) IMAGES.
    EDJE_CREATE;   
    i = edje_images_new();
    PARSER_APPEND(IMAGES, i, Edje_Images);
-   printf("Images: %p\n", i);
+   DBG("Images: %p", i);
    i->doc = C;
 }
 images_blocks ::= LB images_subblocks RB.
+images_blocks ::= DOT images_subblock.
 images_subblocks ::= images_subblocks images_subblock.
 images_subblocks ::= images_subblock.
 
@@ -407,7 +744,7 @@ images_image_start ::= PROPERTY(P) ID(I).
    EDJE_CREATE;
    s = edje_set_image_new();
    PARSER_APPEND(SET_IMAGE, s, Edje_Set_Image);
-   printf("Set image: %p\n", s);
+   DBG("Set image: %p", s);
    STRINGSHARE_REPLACE_NOQUOTES(s->filename, I->text);
 
 images_image_out:
@@ -465,7 +802,7 @@ group_start ::= doc_comment(C) GROUP.
    EDJE_CREATE;   
    g = edje_group_new();
    PARSER_APPEND(GROUP, g, Edje_Group);
-   printf("Group: %p\n", g);
+   DBG("Group: %p", g);
    g->doc = C;
 }
 group_block ::= LB group_subblocks RB.
@@ -507,6 +844,22 @@ group_subblock ::= font.
    EDJE_STRUCT_APPEND(g, fonts, EINA_INLIST_GET(FONT), Edje_Font);
    FONT = NULL;
 }
+group_subblock ::= programs.
+{
+   Edje_Group *g;
+
+   g = PARSER_CURRENT(GROUP, Edje_Group);
+   EDJE_STRUCT_APPEND(g, programses, EINA_INLIST_GET(PROGRAMS), Edje_Programs);
+   PROGRAMS = NULL;
+}
+group_subblock ::= program.
+{
+   Edje_Group *g;
+
+   g = PARSER_CURRENT(GROUP, Edje_Group);
+   EDJE_STRUCT_APPEND(g, programs, EINA_INLIST_GET(PROGRAM), Edje_Program);
+   PROGRAM = NULL;
+}
 group_subblock ::= parts.
 {
    Edje_Group *g;
@@ -524,7 +877,7 @@ group_property ::= PROPERTY(P) ID(I) SEMICOLON. /* property: "value"; */
    Edje_Group *g;
 
    g = PARSER_CURRENT(GROUP, Edje_Group);
-   printf("Group property - '%s':'%s'\n", P->text, I->text);
+   DBG("Group property - '%s':'%s'", P->text, I->text);
    if (!strcmp(P->text, "alias:"))
      STRINGSHARE_REPLACE_NOQUOTES(g->alias, I->text);
    else if (!strcmp(P->text, "name:"))
@@ -541,7 +894,7 @@ group_property ::= PROPERTY(P) INTEGER(I) SEMICOLON. /* property: bool */
    int i;
 
    g = PARSER_CURRENT(GROUP, Edje_Group);
-   printf("Group property - '%s':'%s'\n", P->text, I->text);
+   DBG("Group property - '%s':'%s'", P->text, I->text);
    if (strcmp(P->text, "script_only:"))
      {
         ERROR_SYNTAX(P);
@@ -564,7 +917,7 @@ group_property ::= PROPERTY(P) INTEGER(I) INTEGER(J) SEMICOLON. /* property: int
    Edje_Group *g;
 
    g = PARSER_CURRENT(GROUP, Edje_Group);
-   printf("Property: '%s'\n", P->text);
+   DBG("Property: '%s'", P->text);
    if (!strcmp(P->text, "min:"))
      {
         if (!edje_parser_parse_min(ep, I, J, g->min, g->max))
@@ -593,7 +946,7 @@ parts_start ::= doc_comment(C) PARTS.
    EDJE_CREATE;
    p = edje_parts_new();
    PARTS = p; // there can only be one at a time
-   printf("Parts: %p\n", p);
+   DBG("Parts: %p", p);
    p->doc = C;
 }
 parts_block ::= LB parts_subblocks RB.
@@ -611,6 +964,17 @@ parts_subblock ::= font.
    EDJE_STRUCT_APPEND(PARTS, fonts, EINA_INLIST_GET(FONT), Edje_Font);
    FONT = NULL;
 }
+parts_subblock ::= programs.
+{
+   EDJE_STRUCT_APPEND(PARTS, programses, EINA_INLIST_GET(PROGRAMS), Edje_Programs);
+   PROGRAMS = NULL;
+}
+parts_subblock ::= program.
+{
+   EDJE_STRUCT_APPEND(PARTS, programs, EINA_INLIST_GET(PROGRAM), Edje_Program);
+   PROGRAM = NULL;
+}
+
 
 parts_subblock ::= parts_property.
 parts_property ::= PROPERTY(P) ID(A) ID(B).
@@ -664,7 +1028,7 @@ part_start ::= doc_comment(C) PART.
    EDJE_CREATE;
    p = edje_part_new();
    PARSER_APPEND(PART, p, Edje_Part);
-   printf("Part: %p\n", p);
+   DBG("Part: %p", p);
    p->doc = C;
 }
 part_block ::= LB part_subblocks RB.
@@ -687,6 +1051,22 @@ part_subblock ::= font.
    p = PARSER_CURRENT(PART, Edje_Part);
    EDJE_STRUCT_APPEND(p, fonts, EINA_INLIST_GET(FONT), Edje_Font);
    FONT = NULL;
+}
+part_subblock ::= programs.
+{
+   Edje_Part *p;
+
+   p = PARSER_CURRENT(PART, Edje_Part);
+   EDJE_STRUCT_APPEND(p, programses, EINA_INLIST_GET(PROGRAMS), Edje_Programs);
+   PROGRAMS = NULL;
+}
+part_subblock ::= program.
+{
+   Edje_Part *p;
+
+   p = PARSER_CURRENT(PART, Edje_Part);
+   EDJE_STRUCT_APPEND(p, programs, EINA_INLIST_GET(PROGRAM), Edje_Program);
+   PROGRAM = NULL;
 }
 part_subblock ::= color_classes.
 {
@@ -721,7 +1101,7 @@ part_description_start ::= doc_comment(C) DESCRIPTION.
    EDJE_CREATE;
    p = edje_part_description_new();
    PARSER_APPEND(DESCRIPTION, p, Edje_Part_Description);
-   printf("Part_Description: %p\n", p);
+   DBG("Part_Description: %p", p);
    p->doc = C;
 }
 part_description_block ::= LB part_description_subblocks RB.
@@ -762,6 +1142,22 @@ part_description_subblock ::= font.
    EDJE_STRUCT_APPEND(p, fonts, EINA_INLIST_GET(FONT), Edje_Font);
    FONT = NULL;
 }
+part_description_subblock ::= programs.
+{
+   Edje_Part_Description *p;
+
+   p = PARSER_CURRENT(DESCRIPTION, Edje_Part_Description);
+   EDJE_STRUCT_APPEND(p, programses, EINA_INLIST_GET(PROGRAMS), Edje_Programs);
+   PROGRAMS = NULL;
+}
+part_description_subblock ::= program.
+{
+   Edje_Part_Description *p;
+
+   p = PARSER_CURRENT(DESCRIPTION, Edje_Part_Description);
+   EDJE_STRUCT_APPEND(p, programs, EINA_INLIST_GET(PROGRAM), Edje_Program);
+   PROGRAM = NULL;
+}
 /*************************************** PROPERTY ************************************/
 part_description_subblock ::= part_description_property.
 part_description_property ::= PROPERTY(P) ID(I) SEMICOLON.
@@ -769,7 +1165,7 @@ part_description_property ::= PROPERTY(P) ID(I) SEMICOLON.
     Edje_Part_Description *p;
 
     p = PARSER_CURRENT(DESCRIPTION, Edje_Part_Description);
-    printf("Desc property - '%s':'%s'\n", P->text, I->text);
+    DBG("Desc property - '%s':'%s'", P->text, I->text);
 
     if (!strcmp(P->text, "color_class:")) \
       STRINGSHARE_REPLACE_NOQUOTES(p->color_class, I->text);
@@ -784,7 +1180,7 @@ part_description_property ::= PROPERTY(P) INTEGER(I) SEMICOLON.
     int i;
 
     p = PARSER_CURRENT(DESCRIPTION, Edje_Part_Description);
-    printf("Desc property - '%s':'%s'\n", P->text, I->text);
+    DBG("Desc property - '%s':'%s'", P->text, I->text);
 
    if (!edje_parser_strtobool(I->text, &i))
      {
@@ -806,7 +1202,7 @@ part_description_property ::= PROPERTY(P) ID(I) FLOAT(D) SEMICOLON.
     float d;
 
     p = PARSER_CURRENT(DESCRIPTION, Edje_Part_Description);
-    printf("Desc property - '%s':'%s %s'\n", P->text, I->text, D->text);
+    DBG("Desc property - '%s':'%s %s'", P->text, I->text, D->text);
 
     if (!edje_parser_strtof(D->text, &d))
       {
@@ -837,7 +1233,7 @@ part_description_property ::= PROPERTY(P) INTEGER(I) INTEGER(J) SEMICOLON.
     int i, j;
 
     p = PARSER_CURRENT(DESCRIPTION, Edje_Part_Description);
-    printf("Desc property - '%s':'%s %s'\n", P->text, I->text, J->text);
+    DBG("Desc property - '%s':'%s %s'", P->text, I->text, J->text);
 
    if (!strcmp(P->text, "fixed:"))
      {
@@ -885,7 +1281,7 @@ part_description_property ::= PROPERTY(P) INTEGER(I) INTEGER(J) INTEGER(K) INTEG
    Edje_Token *tokens[4];
 
    p = PARSER_CURRENT(DESCRIPTION, Edje_Part_Description);
-   printf("Part desc property: %s:%s %s %s %s\n", P->text, I->text, J->text, K->text, L->text);
+   DBG("Part desc property: %s:%s %s %s %s", P->text, I->text, J->text, K->text, L->text);
    tokens[0] = I;
    tokens[1] = J;
    tokens[2] = K;
@@ -1165,7 +1561,7 @@ part_description_relone_start ::= REL1.
    Edje_Part_Description *p;
 
    p = PARSER_CURRENT(DESCRIPTION, Edje_Part_Description);
-   printf("Rel1\n");
+   DBG("Rel1");
    REL = &p->rel[0];
 }
 part_description_reltwo_start ::= REL2.
@@ -1173,7 +1569,7 @@ part_description_reltwo_start ::= REL2.
    Edje_Part_Description *p;
 
    p = PARSER_CURRENT(DESCRIPTION, Edje_Part_Description);
-   printf("Rel2\n");
+   DBG("Rel2");
    REL = &p->rel[1];
 }
 part_description_rel_props ::= LB relative_properties RB.
@@ -1231,7 +1627,7 @@ part_property ::= PROPERTY(P) ID(I) SEMICOLON.
    Edje_Part *p;
 
    p = PARSER_CURRENT(PART, Edje_Part);
-   printf("Part property - '%s':'%s'\n", P->text, I->text);
+   DBG("Part property - '%s':'%s'", P->text, I->text);
 #define EDJE_PART_CHECK(TYPE) \
 if (!strcmp(P->text, #TYPE":")) \
   STRINGSHARE_REPLACE_NOQUOTES(p->TYPE, I->text)
@@ -1254,7 +1650,7 @@ part_property ::= PROPERTY(P) CAPS(C) SEMICOLON.
    Edje_Part *p;
 
    p = PARSER_CURRENT(PART, Edje_Part);
-   printf("Part property - '%s':'%s'\n", P->text, C->text);
+   DBG("Part property - '%s':'%s'", P->text, C->text);
    if (!strcmp(P->text, "type:"))
      {
 #define EDJE_PART_CHECK(TYPE) \
@@ -1343,7 +1739,7 @@ part_property ::= PROPERTY(P) INTEGER(I) SEMICOLON.
    int i;
 
    p = PARSER_CURRENT(PART, Edje_Part);
-   printf("Part property - '%s':'%s'\n", P->text, I->text);
+   DBG("Part property - '%s':'%s'", P->text, I->text);
 
    if (!edje_parser_strtobool(I->text, &i))
      {

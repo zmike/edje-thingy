@@ -44,23 +44,24 @@ typedef struct
 
 typedef struct
 {
-   Edje                  *edje;
-   Edje_Stream           *stream;
-   const char            *error;
+   Edje                           *edje;
+   Edje_Stream                    *stream;
+   const char                     *error;
 
-   
    Edje_Part_Description_Relative *rel;
-   Edje_Fonts *fonts;
-   Edje_Font *font;
-   Edje_Part_Description *description;
-   Edje_Collection       *collection; /* current collection */
-   Edje_Color_Class      *color_class;
-   Edje_Images           *images;
-   Edje_Set              *set;
-   Edje_Set_Image        *set_image;
-   Edje_Group            *group;
-   Edje_Parts            *parts;
-   Edje_Part             *part;
+   Edje_Fonts                     *fonts;
+   Edje_Font                      *font;
+   Edje_Part_Description          *description;
+   Edje_Collection                *collection; /* current collection */
+   Edje_Color_Class               *color_class;
+   Edje_Images                    *images;
+   Edje_Set                       *set;
+   Edje_Set_Image                 *set_image;
+   Edje_Group                     *group;
+   Edje_Parts                     *parts;
+   Edje_Part                      *part;
+   Edje_Program                   *program;
+   Edje_Programs                  *programs;
 } Edje_Parser;
 
 typedef void *      (*Edje_Parser_New_Cb)(void *(*)(size_t));
@@ -87,6 +88,8 @@ Eina_Bool    edje_parser_strtol(const char *text,
                                 int        *i);
 Eina_Bool    edje_parser_strtof(const char *text,
                                 float      *f);
+Eina_Bool    edje_parser_strtod(const char *text,
+                                double     *d);
 Edje_Stream *edje_parser_stream_new(const char *str);
 void         edje_parser_stream_next(Edje_Stream *s,
                                      int          length);

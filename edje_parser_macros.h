@@ -13,6 +13,8 @@
 #define REL         ep->rel
 #define FONT        ep->font
 #define FONTS       ep->fonts
+#define PROGRAM     ep->program
+#define PROGRAMS    ep->programs
 
 #define EDJE        ep->edje
 #define EDJE_CREATE if (!EDJE) EDJE = edje_new()
@@ -67,18 +69,21 @@
                 "Syntax error on line %d column %d: unexpected token %s:'%s'\n",           \
                 TOKEN->sline + 1, TOKEN->scol + 1, yyTokenName[TOKEN->type], TOKEN->text); \
          }                                                                                 \
+       ERR("%s", ep->error);                                                               \
   } while (0)
-#define ERROR_RANGE(TOKEN) do {                                            \
+#define ERROR_RANGE(TOKEN)  do {                                           \
        eina_stringshare_del(ep->error);                                    \
        ep->error = eina_stringshare_printf(                                \
            "Syntax error on line %d column %d: Out of range value '%s'\n", \
            TOKEN->sline + 1, TOKEN->scol + 1, TOKEN->text);                \
+       ERR("%s", ep->error);                                               \
   } while (0)
-#define ERROR_TYPE(TOKEN) do {                                             \
-       eina_stringshare_del(ep->error);                                    \
-       ep->error = eina_stringshare_printf(                                \
+#define ERROR_TYPE(TOKEN)   do {                                                            \
+       eina_stringshare_del(ep->error);                                                     \
+       ep->error = eina_stringshare_printf(                                                 \
            "Syntax error on line %d column %d: Block type '%s' does not match part type\n", \
-           TOKEN->sline + 1, TOKEN->scol + 1, TOKEN->text);                \
+           TOKEN->sline + 1, TOKEN->scol + 1, TOKEN->text);                                 \
+       ERR("%s", ep->error);                                                                \
   } while (0)
 
 #endif

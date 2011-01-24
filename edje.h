@@ -28,6 +28,12 @@
 # define strndupa(str, len) strncpy(alloca(len + 1), str, len)
 #endif
 
+extern int edje_parser_log_dom;
+
+#define ERR(...)  EINA_LOG_DOM_ERR(edje_parser_log_dom, __VA_ARGS__)
+#define INF(...)  EINA_LOG_DOM_INFO(edje_parser_log_dom, __VA_ARGS__)
+#define DBG(...)  EINA_LOG_DOM_DBG(edje_parser_log_dom, __VA_ARGS__)
+
 Edje *edje_new(void);
 Edje_Collection *edje_collection_new(void);
 Edje_Color_Class *edje_color_class_new(void);
@@ -45,6 +51,8 @@ Edje_Group *edje_group_new(void);
 Edje_Parts *edje_parts_new(void);
 Edje_Part *edje_part_new(void);
 Edje_Part_Description *edje_part_description_new(void);
+Edje_Program *edje_program_new(void);
+Edje_Programs *edje_programs_new(void);
 
 const char *edje_stringshare_toupper(const char *str);
 Eina_Inlist *edje_inlist_join(Eina_Inlist *a, Eina_Inlist *b);

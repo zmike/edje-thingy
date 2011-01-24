@@ -11,6 +11,30 @@ typedef enum Edje_Compression_Type
    EDJE_COMPRESSION_TYPE_USER
 } Edje_Compression_Type;
 
+typedef enum Edje_Program_Action
+{
+   EDJE_PROGRAM_ACTION_UNKNOWN,
+   EDJE_PROGRAM_ACTION_STATE_SET,
+   EDJE_PROGRAM_ACTION_ACTION_STOP,
+   EDJE_PROGRAM_ACTION_SIGNAL_EMIT,
+   EDJE_PROGRAM_ACTION_DRAG_VAL_SET,
+   EDJE_PROGRAM_ACTION_DRAG_VAL_STEP,
+   EDJE_PROGRAM_ACTION_DRAG_VAL_PAGE,
+   EDJE_PROGRAM_ACTION_FOCUS_SET,
+   EDJE_PROGRAM_ACTION_FOCUS_OBJECT,
+   EDJE_PROGRAM_ACTION_PARAM_COPY,
+   EDJE_PROGRAM_ACTION_PARAM_SET
+} Edje_Program_Action;
+
+typedef enum Edje_Program_Transition
+{
+   EDJE_PROGRAM_TRANSITION_UNKNOWN,
+   EDJE_PROGRAM_TRANSITION_LINEAR,
+   EDJE_PROGRAM_TRANSITION_SINUSOIDAL,
+   EDJE_PROGRAM_TRANSITION_ACCELERATE,
+   EDJE_PROGRAM_TRANSITION_DECELERATE
+} Edje_Program_Transition;
+
 typedef enum Edje_Image_Middle
 {
    EDJE_IMAGE_MIDDLE_DEFAULT,
@@ -176,6 +200,60 @@ typedef struct Edje_Fonts
    Edje_Font *fonts;
 } Edje_Fonts;
 
+typedef struct Edje_Program
+{
+   EINA_INLIST;
+   const char *doc;
+   const char *name;
+   const char *signal;
+   const char *source;
+   Eina_List *targets; /* stringshared */
+   Eina_List *after; /* stringshared */
+   struct
+   {
+      const char *name;
+      const char *description;
+   } api;
+   struct
+   {
+      const char *part;
+      const char *state;
+   } filter;
+   struct
+   {
+      double from;
+      double range;
+   } in;
+   struct
+   {
+      Edje_Program_Action type;
+      struct
+      {
+         Eina_List *strings; /* stringshared in order */
+         double numbers[2];
+      } params;
+      struct
+      {
+         Edje_Program_Transition type;
+         double length;
+      } transition;
+   } action;
+   
+} Edje_Program;
+
+typedef struct Edje_Programs
+{
+   EINA_INLIST;
+   const char *doc;
+
+   Edje_Image *images;
+   Edje_Images *imageses;
+   Edje_Set *sets;
+   Edje_Font *fonts;
+   Edje_Fonts *fontses;
+   Edje_Program *programs;
+} Edje_Programs;
+
 typedef struct Edje_Part_Description_Relative
 {
    float relative[2];
@@ -259,6 +337,8 @@ typedef struct Edje_Part_Description
    Edje_Image *images;
    Edje_Images *imageses;
    Edje_Color_Class *color_classes;
+   Edje_Program *programs;
+   Edje_Programs *programses;
 } Edje_Part_Description;
 
 typedef struct Edje_Part
@@ -301,6 +381,8 @@ typedef struct Edje_Part
    Edje_Fonts *fontses;
    Edje_Font *fonts;
    Edje_Style *styles;
+   Edje_Program *programs;
+   Edje_Programs *programses;
 } Edje_Part;
 
 typedef struct Edje_Parts
@@ -316,6 +398,8 @@ typedef struct Edje_Parts
    Edje_Font *fonts;
    Edje_Style *styles;
    Edje_Part *parts;
+   Edje_Program *programs;
+   Edje_Programs *programses;
 } Edje_Parts;
 
 typedef struct Edje_Group
@@ -335,6 +419,8 @@ typedef struct Edje_Group
    Edje_Parts *parts;
    Edje_Fonts *fontses;
    Edje_Font *fonts;
+   Edje_Program *programs;
+   Edje_Programs *programses;
 } Edje_Group;
 
 typedef struct Edje_Collection

@@ -81,6 +81,8 @@ DEF(Edje_Style, edje_style)
 DEF(Edje_Group, edje_group)
 DEF(Edje_Part, edje_part)
 DEF(Edje_Part_Description, edje_part_description)
+DEF(Edje_Program, edje_program)
+DEF(Edje_Programs, edje_programs)
 
 Edje_Parts *
 edje_parts_new(void)

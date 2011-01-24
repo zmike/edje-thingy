@@ -45,12 +45,24 @@ edje_parser_strtol(const char *text,
 
 Eina_Bool
 edje_parser_strtof(const char *text,
-                   float        *f)
+                   float      *f)
 {
    errno = 0;
    *f = strtof(text, NULL);
    if (errno) return EINA_FALSE;
    if ((*f > 1.0) || (*f < 0.0)) return EINA_FALSE;
+
+   return EINA_TRUE;
+}
+
+Eina_Bool
+edje_parser_strtod(const char *text,
+                   double     *d)
+{
+   errno = 0;
+   *d = strtod(text, NULL);
+   if (errno) return EINA_FALSE;
+   if (*d < 0.0) return EINA_FALSE;
 
    return EINA_TRUE;
 }
@@ -80,7 +92,7 @@ edje_parser_parse_color(Edje_Parser *ep,
    text[3] = I[3]->text;
    len = strlen(P->text); /* check for color*: */
    if ((len < 6) || (len > 7) || (strncmp(P->text, "color", 5)))
-     return EINA_FALSE; /* must set ERROR_SYNTAX in parser */
+     return EINA_FALSE;  /* must set ERROR_SYNTAX in parser */
 
    if (len == 6) /* color: */
      c = color[0];
@@ -89,7 +101,7 @@ edje_parser_parse_color(Edje_Parser *ep,
    else if (P->text[5] == '3') /* color3: */
      c = color[2];
    else
-     return EINA_FALSE; /* must set ERROR_SYNTAX in parser */
+     return EINA_FALSE;  /* must set ERROR_SYNTAX in parser */
 
    for (i = 0; i < 4; i++)
      {

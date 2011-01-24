@@ -19,6 +19,8 @@
 #include <Ecore.h>
 #include "edje_parser_lib.h"
 
+int edje_parser_log_dom = 0;
+
 static Edje *edje;
 static char *edje_file;
 
@@ -82,6 +84,8 @@ main(int argc, char *argv[])
    eina_init();
    ecore_init();
    ecore_app_args_set(argc, (const char **)argv);
+   edje_parser_log_dom = eina_log_domain_register("edje_parser", EINA_COLOR_YELLOW);
+   eina_log_domain_level_set("edje_parser", EINA_LOG_LEVEL_DBG);
 /*
    args = ecore_getopt_parse(&opts, values, argc, argv);
    if (args < 0)
