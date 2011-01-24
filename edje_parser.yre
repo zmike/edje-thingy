@@ -1459,15 +1459,7 @@ part_description_text_prop ::= PROPERTY(P) ID(I) SEMICOLON.
 /******************************************** MAP ***************************************/
 part_description_subblock ::= part_description_map.
 part_description_map ::= part_description_map_start part_description_map_block.
-part_description_map_start ::= MAP(T).
-{
-   Edje_Part *p;
-
-   p = PARSER_CURRENT(PART, Edje_Part);
-   if (p->type != EDJE_PART_TYPE_RECT)
-     ERROR_TYPE(T);
-   edje_parser_token_free(T);
-}
+part_description_map_start ::= MAP.
 part_description_map_block ::= LB part_description_map_props RB.
 part_description_map_block ::= DOT part_description_map_prop.
 part_description_map_props ::= part_description_map_props part_description_map_prop.
