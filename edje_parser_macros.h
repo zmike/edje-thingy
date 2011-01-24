@@ -68,10 +68,16 @@
                 TOKEN->sline + 1, TOKEN->scol + 1, yyTokenName[TOKEN->type], TOKEN->text); \
          }                                                                                 \
   } while (0)
-#define ERROR_RANGE(TOKEN)  do {                                           \
+#define ERROR_RANGE(TOKEN) do {                                            \
        eina_stringshare_del(ep->error);                                    \
        ep->error = eina_stringshare_printf(                                \
            "Syntax error on line %d column %d: Out of range value '%s'\n", \
+           TOKEN->sline + 1, TOKEN->scol + 1, TOKEN->text);                \
+  } while (0)
+#define ERROR_TYPE(TOKEN) do {                                             \
+       eina_stringshare_del(ep->error);                                    \
+       ep->error = eina_stringshare_printf(                                \
+           "Syntax error on line %d column %d: Block type '%s' does not match part type\n", \
            TOKEN->sline + 1, TOKEN->scol + 1, TOKEN->text);                \
   } while (0)
 

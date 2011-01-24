@@ -2,12 +2,6 @@
 #define EDJE_TYPES_H
 
 #include <Eina.h>
-typedef enum Edje_Type
-{
-  EDJE_TYPE_INT,
-  EDJE_TYPE_DOUBLE,
-  EDJE_TYPE_STR
-} Edje_Type;
 
 typedef enum Edje_Compression_Type
 {
@@ -33,6 +27,7 @@ typedef enum Edje_Image_Scale_Hint
 
 typedef enum Edje_Part_Type
 {
+   EDJE_PART_TYPE_UNKNOWN,
    EDJE_PART_TYPE_RECT,
    EDJE_PART_TYPE_TEXT,
    EDJE_PART_TYPE_IMAGE,
@@ -204,6 +199,25 @@ typedef struct Edje_Part_Description
       const char *name;
       float index;
    } state;
+   union
+   {
+      struct
+      {
+         const char *text;
+         const char *text_class;
+         const char *font;
+         const char *style;
+         const char *repch;
+         const char *source;
+         const char *text_source;
+         float elipsis;
+         float align[2];
+         int size;
+         Eina_Bool fit[2];
+         Eina_Bool min[2];
+         Eina_Bool max[2];
+      } text;
+   } type;
 
    float align[2];
    float aspect[2];

@@ -47,6 +47,8 @@ typedef struct
    Edje                  *edje;
    Edje_Stream           *stream;
    const char            *error;
+
+   
    Edje_Part_Description_Relative *rel;
    Edje_Fonts *fonts;
    Edje_Font *font;
@@ -74,13 +76,13 @@ Eina_Bool edje_parser_strtobool(const char *text,
 Eina_Bool edje_parser_parse_min(Edje_Parser *ep,
                                 Edje_Token  *I,
                                 Edje_Token  *J,
-                                int         *min[],
-                                int         *max[]);
+                                int         *min,
+                                int         *max);
 Eina_Bool edje_parser_parse_max(Edje_Parser *ep,
                                 Edje_Token  *I,
                                 Edje_Token  *J,
-                                int         *min[],
-                                int         *max[]);
+                                int         *min,
+                                int         *max);
 Eina_Bool    edje_parser_strtol(const char *text,
                                 int        *i);
 Eina_Bool    edje_parser_strtof(const char *text,
