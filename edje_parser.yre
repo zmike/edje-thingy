@@ -118,6 +118,8 @@ main:
    ";"                { RET(EDJE_SEMICOLON); }
    ":"                { RET(EDJE_COLON); }
    "."                { RET(EDJE_DOT); }
+
+   "script"[ \t\n\r]+"{"[\040-\172\174\176\011\015\n]+"}" { RET(EDJE_EMBRYO); }
    ENDINPUT           { RET(EDJE_EOF); }
    NONPRINT           { RET(EDJE_UNKNOWN); }
 
@@ -205,6 +207,22 @@ doc_comment(Y) ::= DOC(X).
    Y = X->text;
    X->text = NULL;
    edje_parser_token_free(X);
+}
+
+%type script {const char *}
+script(S) ::= EMBRYO(E).
+{
+   const char *p, *q;
+
+   p = E->text;
+   while (p && (isspace(*p) || (*p == '{')))
+     p++;
+   q = E->text + eina_stringshare_strlen(E->text) - 1;
+   while (isspace(*q))
+     q--;
+
+   S = eina_stringshare_add_length(p, q - p);
+   edje_parser_token_free(E);
 }
 /******************************* START COLLECTIONS CODE *********************************/
 collection ::= collection_start collection_block.
@@ -456,6 +474,14 @@ program_blocks ::= LB program_subblocks RB.
 program_blocks ::= DOT program_subblock.
 program_subblocks ::= program_subblocks program_subblock.
 program_subblocks ::= program_subblock.
+
+program_subblock ::= script(S).
+{
+   Edje_Program *p;
+
+   p = PARSER_CURRENT(PROGRAM, Edje_Program);
+   p->script = S;
+}
 
 program_subblock ::= PROPERTY(P) ID(I) SEMICOLON.
 {
@@ -880,6 +906,13 @@ group_subblock ::= externals.
    EDJE_STRUCT_APPEND(g, externals, EXTERNAL, Edje_External);
    EXTERNAL = NULL;
 }
+group_subblock ::= script(S).
+{
+   Edje_Group *g;
+
+   g = PARSER_CURRENT(GROUP, Edje_Group);
+   g->script = S;
+}
 group_subblock ::= parts.
 {
    Edje_Group *g;
@@ -954,6 +987,7 @@ group_property ::= PROPERTY(P) NUMBER(I) NUMBER(J) SEMICOLON. /* property: int i
 group_property_int_out:
    edje_parser_token_free(P);
    edje_parser_token_free(I);
+   edje_parser_token_free(J);
 }
 /*************************** END GROUP PROPERTY BLOCKS ***************************/
 /******************************* END GROUPS CODE *********************************/
@@ -1009,7 +1043,10 @@ parts_subblock ::= part.
    EDJE_STRUCT_APPEND(PARTS, parts, PART, Edje_Part);
    PART = NULL;
 }
-
+parts_subblock ::= script(S).
+{
+   PARTS->script = S;
+}
 parts_subblock ::= parts_property.
 parts_property ::= PROPERTY(P) ID(A) ID(B).
 {
@@ -1101,6 +1138,13 @@ part_subblock ::= images.
    EDJE_STRUCT_APPEND(p, imageses, IMAGES, Edje_Images);
    IMAGES = NULL;
 }
+part_subblock ::= script(S).
+{
+   Edje_Part *p;
+
+   p = PARSER_CURRENT(PART, Edje_Part);
+   p->script = S;
+}
 part_subblock ::= part_description.
 {
    Edje_Part *p;
@@ -1109,6 +1153,7 @@ part_subblock ::= part_description.
    EDJE_STRUCT_APPEND(p, descriptions, DESCRIPTION, Edje_Part_Description);
    DESCRIPTION = NULL;
 }
+
 /************************** START DESCRIPTION CODE ******************************/
 part_description ::= part_description_start part_description_block.
 part_description_start ::= doc_comment(C) DESCRIPTION.
@@ -1174,6 +1219,13 @@ part_description_subblock ::= program.
    p = PARSER_CURRENT(DESCRIPTION, Edje_Part_Description);
    EDJE_STRUCT_APPEND(p, programs, PROGRAM, Edje_Program);
    PROGRAM = NULL;
+}
+part_description_subblock ::= script(S).
+{
+   Edje_Part_Description *p;
+
+   p = PARSER_CURRENT(DESCRIPTION, Edje_Part_Description);
+   p->script = S;
 }
 /*************************************** PROPERTY ************************************/
 part_description_subblock ::= part_description_property.
@@ -1328,6 +1380,7 @@ part_description_property ::= PROPERTY(P) NUMBER(I) NUMBER(J) SEMICOLON.
 part_desc_subblock_bool_out:
    edje_parser_token_free(P);
    edje_parser_token_free(I);
+   edje_parser_token_free(J);
 }
 part_description_property ::= PROPERTY(P) NUMBER(I) NUMBER(J) NUMBER(K) NUMBER(L) SEMICOLON.
 {

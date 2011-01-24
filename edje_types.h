@@ -216,6 +216,7 @@ typedef struct Edje_Program
    const char *name;
    const char *signal;
    const char *source;
+   const char *script;
    Eina_List *targets; /* stringshared */
    Eina_List *after; /* stringshared */
    struct
@@ -288,6 +289,7 @@ typedef struct Edje_Part_Description
 {
    EINA_INLIST;
    const char *doc;
+   const char *script;
    struct
    {
       const char *name;
@@ -367,6 +369,7 @@ typedef struct Edje_Part
 {
    EINA_INLIST;
    const char *doc;
+   const char *script;
    const char *name;
    const char *clip_to;
    const char *source;
@@ -410,6 +413,7 @@ typedef struct Edje_Part
 typedef struct Edje_Parts
 {
    const char *doc;
+   const char *script;
    Eina_Hash *aliases;
    Edje_Set_Image *set_images;
    Edje_Color_Class *color_classes;
@@ -430,6 +434,7 @@ typedef struct Edje_Group
    const char *doc;
    const char *name;
    const char *alias;
+   const char *script;
    int min[2];
    int max[2];
    Eina_Bool script_only : 1;

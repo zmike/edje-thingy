@@ -34,9 +34,9 @@ typedef struct
 typedef struct
 {
    int         type;
-   const char *text; /* Edje_Token text */
+   const char *text; /* stringshared text */
    int         length;
-   int         sline; /* Edje_Token location (starts from 0) */
+   int         sline; /* token location (starts from 0) */
    int         scol;
    int         eline;
    int         ecol;
