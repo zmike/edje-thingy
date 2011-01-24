@@ -214,14 +214,15 @@ script(S) ::= EMBRYO(E).
 {
    const char *p, *q;
 
-   p = E->text;
+   p = E->text + 7;
    while (p && (isspace(*p) || (*p == '{')))
      p++;
    q = E->text + eina_stringshare_strlen(E->text) - 1;
-   while (isspace(*q))
+   while (q && (isspace(*q) || (*q == '}')))
      q--;
 
-   S = eina_stringshare_add_length(p, q - p);
+   S = eina_stringshare_add_length(p, q - p + 1);
+   DBG("Script: '%s'", S);
    edje_parser_token_free(E);
 }
 /******************************* START COLLECTIONS CODE *********************************/
