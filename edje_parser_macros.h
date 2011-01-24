@@ -9,6 +9,7 @@
 #define GROUP       ep->group
 #define PARTS       ep->parts
 #define PART       ep->part
+#define DESCRIPTION ep->description
 
 #define EDJE        ep->edje
 #define EDJE_CREATE if (!EDJE) EDJE = edje_new()
@@ -18,6 +19,9 @@
     EINA_INLIST_GET(NAME)->last ? EINA_INLIST_GET(NAME)->last : EINA_INLIST_GET(NAME) \
     , TYPE)
 
+/* stringshares "string" without quotes */
+#define STRINGSHARE_NOQUOTES(TEXT) \
+  eina_stringshare_add_length(TEXT + 1, strlen(TEXT + 1) - 1)
 /*************************** APPEND MACROS ********************************/
 /* append to parser for temp storage */
 #define PARSER_APPEND(NAME, APPEND, TYPE)                                    \
