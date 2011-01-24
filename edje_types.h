@@ -421,6 +421,7 @@ typedef struct Edje_Group
    Edje_Font *fonts;
    Edje_Program *programs;
    Edje_Programs *programses;
+   Edje_External      *externals;
 } Edje_Group;
 
 typedef struct Edje_Collection
@@ -433,6 +434,7 @@ typedef struct Edje_Collection
    Edje_Color_Class *color_classes;
    Edje_Fonts *fontses;
    Edje_Font *fonts;
+   Edje_External      *externals;
 } Edje_Collection;
 
 typedef struct Edje

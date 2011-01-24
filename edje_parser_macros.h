@@ -15,6 +15,7 @@
 #define FONTS       ep->fonts
 #define PROGRAM     ep->program
 #define PROGRAMS    ep->programs
+#define EXTERNAL    ep->external
 
 #define EDJE        ep->edje
 #define EDJE_CREATE if (!EDJE) EDJE = edje_new()
@@ -53,11 +54,11 @@
   if (STRUCT->NAME)                                                 \
     {                                                               \
        Eina_Inlist *l;                                              \
-       l = edje_inlist_join(EINA_INLIST_GET(STRUCT->NAME), APPEND); \
+       l = edje_inlist_join(EINA_INLIST_GET(STRUCT->NAME), EINA_INLIST_GET(APPEND)); \
        STRUCT->NAME = EINA_INLIST_CONTAINER_GET(l, TYPE);           \
     }                                                               \
   else                                                              \
-    STRUCT->NAME = EINA_INLIST_CONTAINER_GET(APPEND, TYPE)
+    STRUCT->NAME = APPEND
 /**************************** ERROR MACROS **********************************/
 #define ERROR_SYNTAX(TOKEN) do {                                                           \
        if ((!TOKEN) || (!TOKEN->type))                                                     \

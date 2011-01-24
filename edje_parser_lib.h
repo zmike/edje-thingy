@@ -62,6 +62,7 @@ typedef struct
    Edje_Part                      *part;
    Edje_Program                   *program;
    Edje_Programs                  *programs;
+   Edje_External                  *external;
 } Edje_Parser;
 
 typedef void *      (*Edje_Parser_New_Cb)(void *(*)(size_t));

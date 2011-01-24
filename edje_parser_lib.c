@@ -133,6 +133,7 @@ edje_parser_parse_min(Edje_Parser *ep,
         ep->error = eina_stringshare_printf(
             "Syntax error on line %d column %d: max cannot be smaller than min!\n",
             I->sline + 1, I->scol + 1);
+        ERR("%s", ep->error);
         return EINA_FALSE;
      }
    if ((!edje_parser_strtol(J->text, &min[1])) || (min[1] < 0))
@@ -140,11 +141,12 @@ edje_parser_parse_min(Edje_Parser *ep,
         ERROR_RANGE(J);
         return EINA_FALSE;
      }
-   else if ((max[0] < min[0]) || (max[1] < min[1]))
+   else if ((max[0] && (max[0] < min[0])) || (max[1] && (max[1] < min[1])))
      {
         ep->error = eina_stringshare_printf(
             "Syntax error on line %d column %d: max cannot be smaller than min!\n",
             J->sline + 1, J->scol + 1);
+        ERR("%s", ep->error);
         return EINA_FALSE;
      }
    return EINA_TRUE;
@@ -164,11 +166,12 @@ edje_parser_parse_max(Edje_Parser *ep,
         ERROR_RANGE(I);
         return EINA_FALSE;
      }
-   else if ((max[0] < min[0]) || (max[1] < min[1]))
+   else if ((max[0] && (max[0] < min[0])) || (max[1] && (max[1] < min[1])))
      {
         ep->error = eina_stringshare_printf(
             "Syntax error on line %d column %d: max cannot be smaller than min!\n",
             I->sline + 1, I->scol + 1);
+        ERR("%s", ep->error);
         return EINA_FALSE;
      }
    if ((!edje_parser_strtol(J->text, &max[1])) || (max[1] < 0))
@@ -176,11 +179,12 @@ edje_parser_parse_max(Edje_Parser *ep,
         ERROR_RANGE(J);
         return EINA_FALSE;
      }
-   else if ((max[0] < min[0]) || (max[1] < min[1]))
+   else if ((max[0] && (max[0] < min[0])) || (max[1] && (max[1] < min[1])))
      {
         ep->error = eina_stringshare_printf(
             "Syntax error on line %d column %d: max cannot be smaller than min!\n",
             J->sline + 1, J->scol + 1);
+        ERR("%s", ep->error);
         return EINA_FALSE;
      }
    return EINA_TRUE;
