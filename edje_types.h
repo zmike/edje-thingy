@@ -217,7 +217,29 @@ typedef struct Edje_Part_Description
          Eina_Bool min[2];
          Eina_Bool max[2];
       } text;
+      struct
+      {
+        const char *perspective;
+        const char *light;
+        Eina_Bool on : 1;
+        Eina_Bool smooth : 1;
+        Eina_Bool alpha : 1;
+        Eina_Bool backface_cull : 1;
+        Eina_Bool perspective_on : 1;
+        struct
+        {
+           const char *center;
+           float x;
+           float y;
+           float z;
+        } rotation;
+      } map;
    } type;
+   struct
+   {
+      int zplane;
+      int focal;
+   } perspective;
 
    float align[2];
    float aspect[2];

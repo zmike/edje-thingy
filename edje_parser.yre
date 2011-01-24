@@ -110,6 +110,9 @@ main:
    "description"      { RET(EDJE_DESCRIPTION); }
    "fonts"            { RET(EDJE_FONTS); }
    "text"             { RET(EDJE_TEXT); }
+   "map"              { RET(EDJE_MAP); }
+   "rotation"         { RET(EDJE_ROTATION); }
+   "perspective"      { RET(EDJE_PERSPECTIVE); }
    "font"             { RET(EDJE_FONT); }
    "rel1"             { RET(EDJE_REL1); }
    "rel2"             { RET(EDJE_REL2); }
@@ -759,6 +762,7 @@ part_description_subblock ::= font.
    EDJE_STRUCT_APPEND(p, fonts, EINA_INLIST_GET(FONT), Edje_Font);
    FONT = NULL;
 }
+/*************************************** PROPERTY ************************************/
 part_description_subblock ::= part_description_property.
 part_description_property ::= PROPERTY(P) ID(I) SEMICOLON.
 {
@@ -851,15 +855,9 @@ part_description_property ::= PROPERTY(P) INTEGER(I) INTEGER(J) SEMICOLON.
         p->fixed[1] = !!j;
      }
    else if (!strcmp(P->text, "min:"))
-     {
-        if (!edje_parser_parse_min(ep, I, J, p->min, p->max))
-          goto part_desc_subblock_bool_out;
-     }
+     edje_parser_parse_min(ep, I, J, p->min, p->max);
    else if (!strcmp(P->text, "max:"))
-     {
-        if (!edje_parser_parse_max(ep, I, J, p->min, p->max))
-          goto part_desc_subblock_bool_out;
-     }
+     edje_parser_parse_max(ep, I, J, p->min, p->max);
    else if (!strcmp(P->text, "step:"))
      {
         if (!edje_parser_strtol(I->text, &i) || (i < 0))
@@ -921,6 +919,34 @@ part_description_property ::= PROPERTY(P) FLOAT(I) FLOAT(J) SEMICOLON.
    edje_parser_token_free(P);
    edje_parser_token_free(I);
    edje_parser_token_free(J);
+}
+/************************************ PERSPECTIVE ****************************************/
+part_description_subblock ::= part_description_perspective.
+part_description_perspective ::= part_description_perspective_start part_description_perspective_block.
+part_description_perspective_start ::= PERSPECTIVE.
+part_description_perspective_block ::= LB part_description_perspective_subblocks RB.
+part_description_perspective_block ::= DOT part_description_perspective_subblock.
+part_description_perspective_subblocks ::= part_description_perspective_subblocks part_description_perspective_subblock.
+part_description_perspective_subblocks ::= part_description_perspective_subblock.
+part_description_perspective_subblock ::= PROPERTY(P) INTEGER(I) SEMICOLON.
+{
+   Edje_Part_Description *p;
+
+   p = PARSER_CURRENT(DESCRIPTION, Edje_Part_Description);
+   if (!strcmp(P->text, "zplane:"))
+     {
+        if (!edje_parser_strtol(I->text, &p->perspective.zplane))
+          ERROR_RANGE(I);
+     }
+   else if (!strcmp(P->text, "focal:"))
+     {
+        if (!edje_parser_strtol(I->text, &p->perspective.focal))
+          ERROR_RANGE(I);
+     }
+   else ERROR_SYNTAX(P);
+
+   edje_parser_token_free(P);
+   edje_parser_token_free(I);
 }
 /***************************************** TEXT ******************************************/
 part_description_subblock ::= part_description_text.
@@ -1034,6 +1060,101 @@ part_description_text_prop ::= PROPERTY(P) ID(I) SEMICOLON.
    edje_parser_token_free(P);
    edje_parser_token_free(I);
 }
+/******************************************** MAP ***************************************/
+part_description_subblock ::= part_description_map.
+part_description_map ::= part_description_map_start part_description_map_block.
+part_description_map_start ::= MAP(T).
+{
+   Edje_Part *p;
+
+   p = PARSER_CURRENT(PART, Edje_Part);
+   if (p->type != EDJE_PART_TYPE_RECT)
+     ERROR_TYPE(T);
+   edje_parser_token_free(T);
+}
+part_description_map_block ::= LB part_description_map_props RB.
+part_description_map_block ::= DOT part_description_map_prop.
+part_description_map_props ::= part_description_map_props part_description_map_prop.
+part_description_map_props ::= part_description_map_prop.
+part_description_map_prop ::= PROPERTY(P) ID(I) SEMICOLON.
+{
+   Edje_Part_Description *p;
+
+   p = PARSER_CURRENT(DESCRIPTION, Edje_Part_Description);
+   if (!strcmp(P->text, "perspective:"))
+     STRINGSHARE_REPLACE_NOQUOTES(p->type.map.perspective, I->text);
+   else if (!strcmp(P->text, "light:"))
+     STRINGSHARE_REPLACE_NOQUOTES(p->type.map.light, I->text);
+   else ERROR_SYNTAX(P);
+
+   edje_parser_token_free(P);
+   edje_parser_token_free(I);
+}
+part_description_map_prop ::= PROPERTY(P) INTEGER(I) SEMICOLON.
+{
+   Edje_Part_Description *p;
+   int i;
+
+   p = PARSER_CURRENT(DESCRIPTION, Edje_Part_Description);
+#define EDJE_MAP_CHECK(NAME) \
+   if (!strcmp(P->text, #NAME":")) \
+     do { \
+        if (!edje_parser_strtobool(I->text, &i)) \
+          ERROR_RANGE(I); \
+        else \
+          p->type.map.NAME = !!i; \
+     } while (0)
+
+   EDJE_MAP_CHECK(on);
+   else EDJE_MAP_CHECK(smooth);
+   else EDJE_MAP_CHECK(alpha);
+   else EDJE_MAP_CHECK(backface_cull);
+   else EDJE_MAP_CHECK(perspective_on);
+   else ERROR_SYNTAX(P);
+#undef EDJE_MAP_CHECK
+   edje_parser_token_free(P);
+   edje_parser_token_free(I);
+}
+part_description_map_prop ::= part_description_map_rotation.
+part_description_map_rotation ::= part_description_map_rotation_start part_description_map_rotation_block.
+part_description_map_rotation_start ::= ROTATION.
+part_description_map_rotation_block ::= LB part_description_map_rotation_subblocks RB.
+part_description_map_rotation_block ::= DOT part_description_map_rotation_subblock.
+part_description_map_rotation_subblocks ::= part_description_map_rotation_subblocks part_description_map_rotation_subblock.
+part_description_map_rotation_subblocks ::= part_description_map_rotation_subblock.
+part_description_map_rotation_subblock ::= PROPERTY(P) ID(I) SEMICOLON.
+{
+   Edje_Part_Description *p;
+
+   p = PARSER_CURRENT(DESCRIPTION, Edje_Part_Description);
+   if (!strcmp(P->text, "center:"))
+     STRINGSHARE_REPLACE_NOQUOTES(p->type.map.rotation.center, I->text);
+   else ERROR_SYNTAX(P);
+
+   edje_parser_token_free(P);
+   edje_parser_token_free(I);
+}
+part_description_map_rotation_subblock ::= PROPERTY(P) FLOAT(I) SEMICOLON.
+{
+   Edje_Part_Description *p;
+
+   p = PARSER_CURRENT(DESCRIPTION, Edje_Part_Description);
+#define EDJE_MAP_CHECK(NAME) \
+   if (!strcmp(P->text, #NAME":")) \
+     do { \
+        if (!edje_parser_strtof(I->text, &p->type.map.rotation.NAME)) \
+          ERROR_RANGE(I); \
+     } while (0)
+
+   EDJE_MAP_CHECK(x);
+   else EDJE_MAP_CHECK(y);
+   else EDJE_MAP_CHECK(z);
+   else ERROR_SYNTAX(P);
+
+   edje_parser_token_free(P);
+   edje_parser_token_free(I);
+}
+
 /***************************************** REL1/REL2 ************************************/
 part_description_subblock ::= part_description_relone. { REL = NULL; }
 part_description_subblock ::= part_description_reltwo. { REL = NULL; }
