@@ -182,6 +182,15 @@ typedef struct Edje_Font
    const char *alias;
 } Edje_Font;
 
+typedef struct Edje_Part_Description_Relative
+{
+   float relative[2];
+   int offset[2];
+   const char *to;
+   const char *to_x;
+   const char *to_y;
+} Edje_Part_Description_Relative;
+
 typedef struct Edje_Part_Description
 {
    EINA_INLIST;
@@ -205,18 +214,12 @@ typedef struct Edje_Part_Description
    Eina_Bool fixed[2];
    Eina_Bool visible : 1;
    Edje_Part_Description_Aspect_Pref aspect_preference;
+   Edje_Part_Description_Relative rel[2];
    const char *color_class;
    int color[4];
    int color2[4];
    int color3[4];
-   struct
-   {
-      float relative[2];
-      int offset[2];
-      const char *to;
-      const char *to_x;
-      const char *to_y;
-   } rel[2];
+
 
    Edje_Image *images;
    Edje_Images *imageses;

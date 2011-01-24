@@ -47,6 +47,7 @@ typedef struct
    Edje                  *edje;
    Edje_Stream           *stream;
    const char            *error;
+   Edje_Part_Description_Relative *rel;
    Edje_Part_Description *description;
    Edje_Collection       *collection; /* current collection */
    Edje_Color_Class      *color_class;

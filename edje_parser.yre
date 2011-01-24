@@ -110,6 +110,8 @@ main:
    "color_classes"    { RET(EDJE_COLOR_CLASSES); }
    "color_class"      { RET(EDJE_COLOR_CLASS); }
    "description"      { RET(EDJE_DESCRIPTION); }
+   "rel1"             { RET(EDJE_REL1); }
+   "rel2"             { RET(EDJE_REL2); }
    "parts"            { RET(EDJE_PARTS); }
    "part"             { RET(EDJE_PART); }
    "group"            { RET(EDJE_GROUP); }
@@ -121,10 +123,11 @@ main:
    "{"                { RET(EDJE_LB); }
    "}"                { RET(EDJE_RB); }
 
-   D"."[0-9]+        { RET(EDJE_DOUBLE); }
+   D"."[0-9]+         { RET(EDJE_FLOAT); }
    D                  { RET(EDJE_INTEGER); }
 
    ";"                { RET(EDJE_SEMICOLON); }
+   "."                { RET(EDJE_DOT); }
    ENDINPUT           { RET(EDJE_EOF); }
    NONPRINT           { RET(EDJE_UNKNOWN); }
 
@@ -339,7 +342,7 @@ images_image_start ::= PROPERTY(P) ID(I).
    s = edje_set_image_new();
    PARSER_APPEND(SET_IMAGE, s, Edje_Set_Image);
    printf("Set image: %p\n", s);
-   s->filename = STRINGSHARE_NOQUOTES(I->text);
+   STRINGSHARE_REPLACE_NOQUOTES(s->filename, I->text);
 
 images_image_out:
    edje_parser_token_free(P);
@@ -439,9 +442,9 @@ group_property ::= PROPERTY(P) ID(I) SEMICOLON. /* property: "value"; */
    g = PARSER_CURRENT(GROUP, Edje_Group);
    printf("Group property - '%s':'%s'\n", P->text, I->text);
    if (!strcmp(P->text, "alias:"))
-     g->alias = STRINGSHARE_NOQUOTES(I->text);
+     STRINGSHARE_REPLACE_NOQUOTES(g->alias, I->text);
    else if (!strcmp(P->text, "name:"))
-     g->name = STRINGSHARE_NOQUOTES(I->text);
+     STRINGSHARE_REPLACE_NOQUOTES(g->name, I->text);
    else
      ERROR_SYNTAX(P);
 
@@ -526,7 +529,7 @@ parts_property ::= PROPERTY(P) ID(A) ID(B).
      }
 
    a = strndupa(A->text + 1, strlen(A->text + 1) - 1);
-   b = STRINGSHARE_NOQUOTES(B->text);
+   STRINGSHARE_REPLACE_NOQUOTES(b, B->text);
 
 parts_property_out:
    edje_parser_token_free(P);
@@ -625,7 +628,7 @@ part_description_property ::= PROPERTY(P) ID(I) SEMICOLON.
     printf("Desc property - '%s':'%s'\n", P->text, I->text);
 
     if (!strcmp(P->text, "color_class:")) \
-      p->color_class = STRINGSHARE_NOQUOTES(I->text);
+      STRINGSHARE_REPLACE_NOQUOTES(p->color_class, I->text);
    else ERROR_SYNTAX(P);
 
    edje_parser_token_free(P);
@@ -653,7 +656,7 @@ part_description_property_bool_out:
    edje_parser_token_free(P);
    edje_parser_token_free(I);
 }
-part_description_property ::= PROPERTY(P) ID(I) DOUBLE(D) SEMICOLON.
+part_description_property ::= PROPERTY(P) ID(I) FLOAT(D) SEMICOLON.
 {
     Edje_Part_Description *p;
     float d;
@@ -669,12 +672,12 @@ part_description_property ::= PROPERTY(P) ID(I) DOUBLE(D) SEMICOLON.
 
     if (!strcmp(P->text, "inherit:"))
       {
-         p->inherit.name = STRINGSHARE_NOQUOTES(I->text);
+         STRINGSHARE_REPLACE_NOQUOTES(p->inherit.name, I->text);
          p->inherit.index = d;
       }
     else if (!strcmp(P->text, "state:"))
       {
-         p->state.name = STRINGSHARE_NOQUOTES(I->text);
+         STRINGSHARE_REPLACE_NOQUOTES(p->state.name, I->text);
          p->state.index = d;
       }
     else ERROR_SYNTAX(P);
@@ -761,9 +764,76 @@ part_description_property ::= PROPERTY(P) INTEGER(I) INTEGER(J) INTEGER(K) INTEG
    edje_parser_token_free(K);
    edje_parser_token_free(L);
 }
+
+part_description_subblock ::= part_description_relone. { REL = NULL; }
+part_description_subblock ::= part_description_reltwo. { REL = NULL; }
+part_description_relone ::= part_description_relone_start part_description_rel_props.
+part_description_reltwo ::= part_description_reltwo_start part_description_rel_props.
+part_description_relone_start ::= REL1.
+{
+   Edje_Part_Description *p;
+
+   p = PARSER_CURRENT(DESCRIPTION, Edje_Part_Description);
+   printf("Rel1\n");
+   REL = &p->rel[0];
+}
+part_description_reltwo_start ::= REL2.
+{
+   Edje_Part_Description *p;
+
+   p = PARSER_CURRENT(DESCRIPTION, Edje_Part_Description);
+   printf("Rel2\n");
+   REL = &p->rel[1];
+}
+part_description_rel_props ::= LB relative_properties RB.
+relative_properties ::= relative_properties relative_property.
+relative_properties ::= relative_property relative_property.
+part_description_rel_props ::= DOT relative_property.
+relative_property ::= PROPERTY(P) INTEGER(I) INTEGER(J).
+{
+   if (!strcmp(P->text, "offset:"))
+     {
+        if (!edje_parser_strtol(I->text, &REL->offset[0]))
+          ERROR_RANGE(I);
+        else if (!edje_parser_strtol(J->text, &REL->offset[1]))
+          ERROR_RANGE(J);
+     }
+   else ERROR_SYNTAX(P);
+   
+   edje_parser_token_free(P);
+   edje_parser_token_free(I);
+   edje_parser_token_free(J);
+}
+relative_property ::= PROPERTY(P) FLOAT(I) FLOAT(J).
+{
+   if (!strcmp(P->text, "relative:"))
+     {
+        if (!edje_parser_strtof(I->text, &REL->relative[0]))
+          ERROR_RANGE(I);
+        else if (!edje_parser_strtof(J->text, &REL->relative[1]))
+          ERROR_RANGE(J);
+     }
+   else ERROR_SYNTAX(P);
+   
+   edje_parser_token_free(P);
+   edje_parser_token_free(I);
+   edje_parser_token_free(J);
+}
+relative_property ::= PROPERTY(P) ID(I).
+{
+   if (!strcmp(P->text, "to:"))
+     STRINGSHARE_REPLACE_NOQUOTES(REL->to, I->text);
+   else if (!strcmp(P->text, "to_x:"))
+     STRINGSHARE_REPLACE_NOQUOTES(REL->to_x, I->text);
+   else if (!strcmp(P->text, "to_y:"))
+     STRINGSHARE_REPLACE_NOQUOTES(REL->to_y, I->text);
+   else ERROR_SYNTAX(P);
+   edje_parser_token_free(P);
+   edje_parser_token_free(I);
+}
 /******************************* END DESC SUB-BLOCKS ****************************/
 /************************** END DESCRIPTION CODE ********************************/
-/******************************* START PART CODE ********************************/
+/************************** START PART PROPERTY CODE ****************************/
 part_subblock ::= part_property.
 part_property ::= PROPERTY(P) ID(I) SEMICOLON.
 {
@@ -773,7 +843,7 @@ part_property ::= PROPERTY(P) ID(I) SEMICOLON.
    printf("Part property - '%s':'%s'\n", P->text, I->text);
 #define EDJE_PART_CHECK(TYPE) \
 if (!strcmp(P->text, #TYPE":")) \
-  p->TYPE = STRINGSHARE_NOQUOTES(I->text)
+  STRINGSHARE_REPLACE_NOQUOTES(p->TYPE, I->text)
   
    EDJE_PART_CHECK(clip_to);
    else EDJE_PART_CHECK(name);
@@ -907,5 +977,6 @@ part_property_bool_out:
    edje_parser_token_free(P);
    edje_parser_token_free(I);
 }
+/*************************** END PART PROPERTY CODE ****************************/
 /*************************** END PART SUB-BLOCKS *******************************/
 /******************************* END PART CODE *********************************/
