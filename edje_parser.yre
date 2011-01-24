@@ -77,9 +77,9 @@ main:
    D     = [-]?[0-9]+;
    N     = [a-z0-9_];
 
-   SLCOM = "\\" (.\ENDINPUT)* ("\n"|ENDINPUT);
+   SL_COMMENT = "//" (.\ENDINPUT)* ("\n"|ENDINPUT);
 
-   SLCOM              { NEXT; goto main; }
+   SL_COMMENT         { NEXT; goto main; }
    "/*"               { goto commentblock; }
    [ \t\n\r]+         { NEXT; goto main; }
 
