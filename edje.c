@@ -75,6 +75,7 @@ DEF(Edje_Image, edje_image)
 DEF(Edje_Set_Image, edje_set_image)
 DEF(Edje_Set, edje_set)
 DEF(Edje_Font, edje_font)
+DEF(Edje_Fonts, edje_fonts)
 DEF(Edje_Data, edje_data)
 DEF(Edje_Style, edje_style)
 DEF(Edje_Group, edje_group)
@@ -91,13 +92,4 @@ edje_parts_new(void)
    e->aliases = eina_hash_string_djb2_new((Eina_Free_Cb)eina_stringshare_del);
    return e;
 }
-Edje_Property *
-edje_property_new(Edje_Type type)
-{
-   Edje_Property *p;
 
-   p = calloc(1, sizeof(Edje_Property));
-   EINA_SAFETY_ON_NULL_RETURN_VAL(p, NULL);
-   p->type = type;
-   return p;
-}

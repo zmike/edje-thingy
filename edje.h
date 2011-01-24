@@ -37,6 +37,7 @@ Edje_Image *edje_image_new(void);
 Edje_Set_Image *edje_set_image_new(void);
 Edje_Set *edje_set_new(void);
 Edje_Font *edje_font_new(void);
+Edje_Fonts *edje_fonts_new(void);
 Edje_Data *edje_data_new(void);
 Edje_Color_Class *edje_color_class_new(void);
 Edje_Style *edje_style_new(void);
@@ -44,7 +45,6 @@ Edje_Group *edje_group_new(void);
 Edje_Parts *edje_parts_new(void);
 Edje_Part *edje_part_new(void);
 Edje_Part_Description *edje_part_description_new(void);
-Edje_Property *edje_property_new(Edje_Type type);
 
 const char *edje_stringshare_toupper(const char *str);
 Eina_Inlist *edje_inlist_join(Eina_Inlist *a, Eina_Inlist *b);
