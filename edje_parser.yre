@@ -59,6 +59,7 @@ extern void        edje_parser_Trace(FILE *,
    edje_parser_stream_to_token(Edje_Stream *s)
    {
       const char *c, *b, *q;
+      int brace_open = 0;
 
       if (s->length == s->index)
         return edje_parser_token_new(s, EDJE_EOF, 0);
@@ -95,6 +96,12 @@ main:
    "perspective"      { RET(EDJE_PERSPECTIVE); }
    "programs"         { RET(EDJE_PROGRAMS); }
    "program"          { RET(EDJE_PROGRAM); }
+   "script"
+{
+   while (c++ && (*c != '}'))
+     if (*c == '{') brace_open++;
+   goto scriptblock;
+}
    "font"             { RET(EDJE_FONT); }
    "rel1"             { RET(EDJE_REL1); }
    "rel2"             { RET(EDJE_REL2); }
@@ -118,12 +125,18 @@ main:
    ";"                { RET(EDJE_SEMICOLON); }
    ":"                { RET(EDJE_COLON); }
    "."                { RET(EDJE_DOT); }
-
-   "script"[ \t\n\r]+"{"[\040-\172\174\176\011\015\n]+"}" { RET(EDJE_EMBRYO); }
    ENDINPUT           { RET(EDJE_EOF); }
    NONPRINT           { RET(EDJE_UNKNOWN); }
 
  */
+
+scriptblock:
+/*!re2c
+  "{"         { brace_open++; c++; goto scriptblock; }
+  "}"         { if (--brace_open < 1) RET(EDJE_EMBRYO); c++; goto scriptblock; }
+  [^{}]       { c++; goto scriptblock; }
+  ENDINPUT             { RET(EDJE_UNKNOWN); }
+*/
 
 commentblock:
 /*!re2c
