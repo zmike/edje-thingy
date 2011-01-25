@@ -157,6 +157,7 @@ typedef struct Edje_External
 typedef struct Edje_Set_Image
 {
    EINA_INLIST;
+   const char *doc;
    const char *filename;
    Edje_Compression_Type comp;
    int comp_amount;
@@ -256,7 +257,7 @@ typedef struct Edje_Programs
    EINA_INLIST;
    const char *doc;
 
-   Edje_Image *images;
+   Edje_Set_Image *set_images;
    Edje_Images *imageses;
    Edje_Set *sets;
    Edje_Font *fonts;
@@ -449,12 +450,14 @@ typedef struct Edje_Group
    Edje_Program *programs;
    Edje_Programs *programses;
    Edje_External      *externals;
+   Edje_Set *sets;
 } Edje_Group;
 
 typedef struct Edje_Collection
 {
    EINA_INLIST;
    const char *doc;
+   Edje_Set *sets;
    Edje_Group *groups;
    Edje_Set_Image *images;
    Edje_Images *imageses;

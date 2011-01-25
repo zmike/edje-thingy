@@ -85,10 +85,14 @@ main:
    [ \t\n\r]+         { NEXT; goto main; }
 
    "collections"      { RET(EDJE_COLLECTIONS); }
+   "set"              { RET(EDJE_SET); }
    "externals"        { RET(EDJE_EXTERNALS); }
    "data"             { RET(EDJE_DATA); }
    "color_classes"    { RET(EDJE_COLOR_CLASSES); }
    "color_class"      { RET(EDJE_COLOR_CLASS); }
+   "images"           { RET(EDJE_IMAGES); }
+   "image"            { RET(EDJE_IMAGE); }
+   "set"              { RET(EDJE_SET); }
    "description"      { RET(EDJE_DESCRIPTION); }
    "fonts"            { RET(EDJE_FONTS); }
    "text"             { RET(EDJE_TEXT); }
@@ -195,13 +199,6 @@ toplevel_block ::= data.
    DATA = NULL;
 }
 /*
-toplevel_block ::= sets_block(B).
-{
-   EDJE_CREATE;
-   EDJE_APPEND(sets);
-}
-
-
 toplevel_block ::= styles_block(B).
 {
    EDJE_CREATE;
@@ -264,6 +261,13 @@ collections_subblock ::= group.
    EDJE_STRUCT_APPEND(c, groups, GROUP, Edje_Group);
    GROUP = NULL;
 }
+collections_subblock ::= set.
+{
+   Edje_Collection *c;
+   c = PARSER_CURRENT(COLLECTION, Edje_Collection);
+   EDJE_STRUCT_APPEND(c, sets, SET, Edje_Set);
+   SET = NULL;
+}
 collections_subblock ::= color_classes.
 {
    Edje_Collection *c;
@@ -323,8 +327,82 @@ data_subblock ::= PROPERTY(P) ID(I) ID(J) SEMICOLON.
 
    edje_parser_token_free(P);
    edje_parser_token_free(I);
+   edje_parser_token_free(J);
 }
 /********************************* END DATA CODE ****************************************/
+/******************************** START SET CODE ***************************************/
+set ::= set_start set_block.
+set_start ::= doc_comment(C) SET.
+{
+   Edje_Set *s;
+
+   EDJE_CREATE;
+   s = edje_set_new();
+   PARSER_APPEND(SET, s, Edje_Set);
+   DBG("Set: %p", s);
+   s->doc = C;
+}
+set_block ::= LB set_subblocks RB.
+set_block ::= DOT set_subblock.
+set_subblocks ::= set_subblocks set_subblock.
+set_subblocks ::= set_subblock.
+
+set_subblock ::= PROPERTY(P) ID(I) SEMICOLON.
+{
+   Edje_Set *s;
+
+   if (!strcmp(P->text, "name:"))
+     STRINGSHARE_REPLACE_NOQUOTES(s->name, I->text);
+   else ERROR_SYNTAX(P);
+
+   edje_parser_token_free(P);
+   edje_parser_token_free(I);
+}
+set_subblock ::= set_image.
+set_image ::= set_image_start set_image_block.
+set_image_start ::= doc_comment(C) IMAGE.
+{
+   Edje_Set_Image *s;
+
+   s = edje_set_image_new();
+   PARSER_APPEND(SET_IMAGE, s, Edje_Set_Image);
+   DBG("Set_Image: %p", s);
+   s->doc = C;
+}
+set_image_block ::= LB set_image_subblocks RB.
+set_image_block ::= DOT set_image_subblock.
+set_image_subblocks ::= set_image_subblock set_image_subblock.
+set_image_subblocks ::= set_image_subblock.
+set_image_subblock ::= images_image.
+set_image_subblock ::= PROPERTY(P) NUMBER(I) NUMBER(J) NUMBER(K) NUMBER(L) SEMICOLON.
+{
+   Edje_Set_Image *s;
+   Edje_Token *t[4];
+   unsigned int i;
+
+   t[0] = I;
+   t[1] = J;
+   t[2] = K;
+   t[3] = L;
+
+   s = PARSER_CURRENT(SET_IMAGE, Edje_Set_Image);
+
+   for (i = 0; i < sizeof(t); i++)
+     {
+        if (!edje_parser_strtol(t[i]->text, &s->size[i]))
+          {
+             ERROR_RANGE(t[i]);
+             break;
+          }
+     }
+     
+   edje_parser_token_free(P);
+   edje_parser_token_free(I);
+   edje_parser_token_free(J);
+   edje_parser_token_free(K);
+   edje_parser_token_free(L);
+}
+/********************************* END SET CODE ****************************************/
 /******************************* START EXTERNALS CODE ***********************************/
 externals ::= externals_start externals_block.
 externals_start ::= doc_comment EXTERNALS.
@@ -471,16 +549,15 @@ programs_subblock ::= program.
    EDJE_STRUCT_APPEND(p, programs, PROGRAM, Edje_Program);
    PROGRAM = NULL;
 }
-/*
-programs_subblock ::= image.
+
+programs_subblock ::= images_image.
 {
    Edje_Programs *p;
 
    p = PARSER_CURRENT(PROGRAMS, Edje_Programs);
-   EDJE_STRUCT_APPEND(p, images, IMAGE, Edje_Image);
-   IMAGE = NULL;
+   EDJE_STRUCT_APPEND(p, set_images, SET_IMAGE, Edje_Set_Image);
+   SET_IMAGE = NULL;
 }
-*/
 programs_subblock ::= images.
 {
    Edje_Programs *p;
@@ -505,7 +582,15 @@ programs_subblock ::= fonts.
    EDJE_STRUCT_APPEND(p, fontses, FONTS, Edje_Fonts);
    FONTS = NULL;
 }
-/*programs_subblocks ::= set.*/
+programs_subblock ::= set.
+{
+   Edje_Programs *p;
+
+   p = PARSER_CURRENT(PROGRAMS, Edje_Programs);
+   EDJE_STRUCT_APPEND(p, sets, SET, Edje_Set);
+   SET = NULL;
+
+}
 /******************************** END PROGRAMS CODE **********************************/
 /******************************** START PROGRAM CODE **********************************/
 program ::= program_start program_blocks.
@@ -809,7 +894,7 @@ images_blocks ::= DOT images_subblock.
 images_subblocks ::= images_subblocks images_subblock.
 images_subblocks ::= images_subblock.
 
-images_subblock ::= images_image_start compression SEMICOLON.
+images_subblock ::= images_image.
 {
    Edje_Images *i;
 
@@ -817,6 +902,16 @@ images_subblock ::= images_image_start compression SEMICOLON.
    EDJE_STRUCT_APPEND(i, set_images, SET_IMAGE, Edje_Set_Image);
    SET_IMAGE = NULL;
 }
+images_subblock ::= set.
+{
+   Edje_Images *i;
+
+   i = PARSER_CURRENT(IMAGES, Edje_Images);
+   EDJE_STRUCT_APPEND(i, sets, SET, Edje_Set);
+   SET = NULL;
+}
+
+images_image ::= images_image_start compression SEMICOLON.
 images_image_start ::= PROPERTY(P) ID(I).
 {
    Edje_Set_Image *s;
@@ -831,10 +926,13 @@ images_image_start ::= PROPERTY(P) ID(I).
         ERROR_SYNTAX(I);
         goto images_image_out;
      }
-   EDJE_CREATE;
-   s = edje_set_image_new();
-   PARSER_APPEND(SET_IMAGE, s, Edje_Set_Image);
-   DBG("Set image: %p", s);
+   s = PARSER_CURRENT(SET_IMAGE, Edje_Set_Image);
+   if ((!s) || (s->filename))
+     { /* play nice with Edje_Set objects */
+        s = edje_set_image_new();
+        PARSER_APPEND(SET_IMAGE, s, Edje_Set_Image);
+        DBG("Set image: %p", s);
+     }
    STRINGSHARE_REPLACE_NOQUOTES(s->filename, I->text);
 
 images_image_out:
@@ -917,6 +1015,14 @@ group_subblock ::= images.
    g = PARSER_CURRENT(GROUP, Edje_Group);
    EDJE_STRUCT_APPEND(g, imageses, IMAGES, Edje_Images);
    IMAGES = NULL;
+}
+group_subblock ::= set.
+{
+   Edje_Group *g;
+
+   g = PARSER_CURRENT(GROUP, Edje_Group);
+   EDJE_STRUCT_APPEND(g, sets, SET, Edje_Set);
+   SET = NULL;
 }
 group_subblock ::= fonts.
 {
@@ -1098,6 +1204,11 @@ parts_subblock ::= images.
    EDJE_STRUCT_APPEND(PARTS, imageses, IMAGES, Edje_Images);
    IMAGES = NULL;
 }
+parts_subblock ::= set.
+{
+   EDJE_STRUCT_APPEND(PARTS, sets, SET, Edje_Set);
+   SET = NULL;
+}
 parts_subblock ::= part.
 {
    EDJE_STRUCT_APPEND(PARTS, parts, PART, Edje_Part);
@@ -1181,6 +1292,14 @@ part_subblock ::= program.
    p = PARSER_CURRENT(PART, Edje_Part);
    EDJE_STRUCT_APPEND(p, programs, PROGRAM, Edje_Program);
    PROGRAM = NULL;
+}
+part_subblock ::= set.
+{
+   Edje_Part *p;
+
+   p = PARSER_CURRENT(PART, Edje_Part);
+   EDJE_STRUCT_APPEND(p, sets, SET, Edje_Set);
+   SET = NULL;
 }
 part_subblock ::= color_classes.
 {
