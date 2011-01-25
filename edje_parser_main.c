@@ -8,7 +8,7 @@
  *
  * This program is distributed in the hope that it will be useful,
  * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the 
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
  * GNU Lesser General Public License for more details.
  *
  * You should have received a copy of the GNU Lesser General Public License
@@ -53,11 +53,12 @@ static const Ecore_Getopt opts = {
 #endif
 
 extern void edje_parser_Trace(FILE *,
-                     char *);
+                              char *);
 
 
 int
-main(int argc, char *argv[])
+main(int   argc,
+     char *argv[])
 {
    Eina_Bool err;
 #if 0
@@ -93,9 +94,8 @@ main(int argc, char *argv[])
 
    if (exit_option)
      return 0;
-*/
+ */
    edje_file = argv[1];
-
 
    if (!edje_file)
      {
@@ -113,7 +113,7 @@ main(int argc, char *argv[])
      }
 
    //if (debug)
-     printf("edje-parser: Done!!\n");
+   printf("edje-parser: Done!!\n");
    return 0;
 }
 

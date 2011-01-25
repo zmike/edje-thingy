@@ -71,10 +71,10 @@ typedef void *      (*Edje_Parser_New_Cb)(void *(*)(size_t));
 typedef void        (*Edje_Parser_Free_Cb)(void *, void (*)(void *));
 typedef void        (*Edje_Parser_Cb)(void *, int, Edje_Token *, Edje_Parser *);
 typedef Edje_Token *(*Edje_Token_Cb)(Edje_Stream *);
-Eina_Bool edje_parser_parse_color(Edje_Parser *ep,
-                                  Edje_Token  *P,
-                                  Edje_Token  *I[],
-                                  int         *color[]);
+Eina_Bool edje_parser_parse_color(Edje_Parser * ep,
+                                  Edje_Token * P,
+                                  Edje_Token * I[],
+                                  int *color[]);
 Eina_Bool edje_parser_strtobool(const char *text,
                                 int        *i);
 Eina_Bool edje_parser_parse_min(Edje_Parser *ep,

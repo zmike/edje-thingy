@@ -8,7 +8,7 @@
  *
  * This program is distributed in the hope that it will be useful,
  * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the 
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
  * GNU Lesser General Public License for more details.
  *
  * You should have received a copy of the GNU Lesser General Public License
@@ -30,7 +30,7 @@
 #define alloca __alloca
 #else
 #include <stddef.h>
-void *alloca (size_t);
+void *alloca(size_t);
 #endif
 
 const char *
@@ -44,7 +44,8 @@ edje_stringshare_toupper(const char *str)
 }
 
 Eina_Inlist *
-edje_inlist_join(Eina_Inlist *a, Eina_Inlist *b)
+edje_inlist_join(Eina_Inlist *a,
+                 Eina_Inlist *b)
 {
    Eina_Inlist *l;
    if (!a) return b;
@@ -60,12 +61,12 @@ edje_inlist_join(Eina_Inlist *a, Eina_Inlist *b)
    return b;
 }
 
-#define DEF(TYPE, name) \
-TYPE * \
-name##_new(void) \
-{ \
-   return calloc(1, sizeof(TYPE)); \
-}
+#define DEF(TYPE, name)              \
+  TYPE *                             \
+  name##_new(void)                   \
+  {                                  \
+     return calloc(1, sizeof(TYPE)); \
+  }
 
 DEF(Edje, edje)
 DEF(Edje_Collection, edje_collection)
@@ -94,6 +95,7 @@ edje_param_free(Edje_Param *e)
       case EDJE_PARAM_TYPE_CHOICE:
         eina_stringshare_del(e->data.s);
         break;
+
       default:
         break;
      }
@@ -111,6 +113,7 @@ edje_data_new(void)
    e->files = eina_hash_string_djb2_new((Eina_Free_Cb)eina_stringshare_del);
    return e;
 }
+
 Edje_Style *
 edje_style_new(void)
 {
@@ -121,6 +124,7 @@ edje_style_new(void)
    e->tags = eina_hash_string_djb2_new((Eina_Free_Cb)eina_stringshare_del);
    return e;
 }
+
 Edje_Part_Description *
 edje_part_description_new(void)
 {

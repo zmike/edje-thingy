@@ -52,14 +52,14 @@
   else                                                                             \
     EDJE->NAME = APPEND
 /* append to current (struct->name) */
-#define EDJE_STRUCT_APPEND(STRUCT, NAME, APPEND, TYPE)              \
-  if (STRUCT->NAME)                                                 \
-    {                                                               \
-       Eina_Inlist *l;                                              \
+#define EDJE_STRUCT_APPEND(STRUCT, NAME, APPEND, TYPE)                               \
+  if (STRUCT->NAME)                                                                  \
+    {                                                                                \
+       Eina_Inlist *l;                                                               \
        l = edje_inlist_join(EINA_INLIST_GET(STRUCT->NAME), EINA_INLIST_GET(APPEND)); \
-       STRUCT->NAME = EINA_INLIST_CONTAINER_GET(l, TYPE);           \
-    }                                                               \
-  else                                                              \
+       STRUCT->NAME = EINA_INLIST_CONTAINER_GET(l, TYPE);                            \
+    }                                                                                \
+  else                                                                               \
     STRUCT->NAME = APPEND
 /**************************** ERROR MACROS **********************************/
 #define ERROR_SYNTAX(TOKEN) do {                                                           \
@@ -69,7 +69,7 @@
          {                                                                                 \
             eina_stringshare_del(ep->error);                                               \
             ep->error = eina_stringshare_printf(                                           \
-                "Syntax error on line %d column %d: unexpected token %s: '%s'\n",           \
+                "Syntax error on line %d column %d: unexpected token %s: '%s'\n",          \
                 TOKEN->sline + 1, TOKEN->scol + 1, yyTokenName[TOKEN->type], TOKEN->text); \
          }                                                                                 \
        ERR("%s", ep->error);                                                               \
