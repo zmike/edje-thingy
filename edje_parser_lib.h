@@ -48,22 +48,23 @@ typedef struct
    Edje_Stream                    *stream;
    const char                     *error;
 
-   Edje_Part_Description_Relative *rel;
-   Edje_Data                      *data;
-   Edje_Fonts                     *fonts;
-   Edje_Font                      *font;
-   Edje_Part_Description          *description;
    Edje_Collection                *collection; /* current collection */
    Edje_Color_Class               *color_class;
-   Edje_Images                    *images;
-   Edje_Set                       *set;
-   Edje_Set_Image                 *set_image;
+   Edje_Data                      *data;
+   Edje_External                  *external;
+   Edje_Font                      *font;
+   Edje_Fonts                     *fonts;
    Edje_Group                     *group;
-   Edje_Parts                     *parts;
+   Edje_Images                    *images;
    Edje_Part                      *part;
+   Edje_Parts                     *parts;
+   Edje_Part_Description_Relative *rel;
+   Edje_Part_Description          *description;
    Edje_Program                   *program;
    Edje_Programs                  *programs;
-   Edje_External                  *external;
+   Edje_Set                       *set;
+   Edje_Set_Image                 *set_image;
+   Edje_Style                     *style;
 } Edje_Parser;
 
 typedef void *      (*Edje_Parser_New_Cb)(void *(*)(size_t));

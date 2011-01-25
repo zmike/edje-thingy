@@ -77,7 +77,6 @@ DEF(Edje_Set_Image, edje_set_image)
 DEF(Edje_Set, edje_set)
 DEF(Edje_Font, edje_font)
 DEF(Edje_Fonts, edje_fonts)
-DEF(Edje_Style, edje_style)
 DEF(Edje_Group, edje_group)
 DEF(Edje_Part, edje_part)
 DEF(Edje_Param, edje_param)
@@ -112,7 +111,16 @@ edje_data_new(void)
    e->files = eina_hash_string_djb2_new((Eina_Free_Cb)eina_stringshare_del);
    return e;
 }
+Edje_Style *
+edje_style_new(void)
+{
+   Edje_Style *e;
 
+   e = calloc(1, sizeof(Edje_Style));
+   EINA_SAFETY_ON_NULL_RETURN_VAL(e, NULL);
+   e->tags = eina_hash_string_djb2_new((Eina_Free_Cb)eina_stringshare_del);
+   return e;
+}
 Edje_Part_Description *
 edje_part_description_new(void)
 {

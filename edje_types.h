@@ -169,14 +169,14 @@ typedef struct Edje_Set
    EINA_INLIST;
    const char *doc;
    const char *name;
-   Edje_Set_Image *set_images;
+   Edje_Set_Image *images;
 } Edje_Set;
 
 typedef struct Edje_Images
 {
    EINA_INLIST;
    const char *doc;
-   Edje_Set_Image *set_images;
+   Edje_Set_Image *images;
    Edje_Set *sets;
 } Edje_Images;
 
@@ -257,7 +257,7 @@ typedef struct Edje_Programs
    EINA_INLIST;
    const char *doc;
 
-   Edje_Set_Image *set_images;
+   Edje_Set_Image *images;
    Edje_Images *imageses;
    Edje_Set *sets;
    Edje_Font *fonts;
@@ -364,6 +364,7 @@ typedef struct Edje_Part_Description
    Edje_Color_Class *color_classes;
    Edje_Program *programs;
    Edje_Programs *programses;
+   Edje_Style         *styles;
 } Edje_Part_Description;
 
 typedef struct Edje_Part
@@ -416,17 +417,16 @@ typedef struct Edje_Parts
    const char *doc;
    const char *script;
    Eina_Hash *aliases;
-   Edje_Set_Image *set_images;
    Edje_Color_Class *color_classes;
    Edje_Set *sets;
    Edje_Set_Image *images;
-   Edje_Images *imageses;
-   Edje_Fonts *fontses;
    Edje_Font *fonts;
-   Edje_Style *styles;
+   Edje_Fonts *fontses;
+   Edje_Images *imageses;
    Edje_Part *parts;
    Edje_Program *programs;
    Edje_Programs *programses;
+   Edje_Style *styles;
 } Edje_Parts;
 
 typedef struct Edje_Group
@@ -441,41 +441,42 @@ typedef struct Edje_Group
    Eina_Bool script_only : 1;
    Edje_Color_Class *color_classes;
    Edje_Data *data;
-   Edje_Style *styles;
-   Edje_Set_Image *images;
+   Edje_External      *externals;
+   Edje_Font *fonts;
+   Edje_Fonts *fontses;
    Edje_Images *imageses;
    Edje_Parts *parts;
-   Edje_Fonts *fontses;
-   Edje_Font *fonts;
    Edje_Program *programs;
    Edje_Programs *programses;
-   Edje_External      *externals;
    Edje_Set *sets;
+   Edje_Set_Image *images;
+   Edje_Style *styles;
 } Edje_Group;
 
 typedef struct Edje_Collection
 {
    EINA_INLIST;
    const char *doc;
-   Edje_Set *sets;
-   Edje_Group *groups;
-   Edje_Set_Image *images;
-   Edje_Images *imageses;
    Edje_Color_Class *color_classes;
-   Edje_Fonts *fontses;
-   Edje_Font *fonts;
    Edje_External      *externals;
+   Edje_Font *fonts;
+   Edje_Fonts *fontses;
+   Edje_Group *groups;
+   Edje_Images *imageses;
+   Edje_Set *sets;
+   Edje_Set_Image *images;
+   Edje_Style         *styles;
 } Edje_Collection;
 
 typedef struct Edje
 {
    Edje_Collection    *collections;
+   Edje_Color_Class   *color_classes;
+   Edje_Data          *data;
    Edje_External      *externals;
+   Edje_Fonts         *fontses;
    Edje_Images        *imageses;
    Edje_Set           *sets;
-   Edje_Fonts         *fontses;
-   Edje_Data          *data;
-   Edje_Color_Class   *color_classes;
    Edje_Style         *styles;
 } Edje;
 #endif

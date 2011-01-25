@@ -101,6 +101,8 @@ main:
    "perspective"      { RET(EDJE_PERSPECTIVE); }
    "programs"         { RET(EDJE_PROGRAMS); }
    "program"          { RET(EDJE_PROGRAM); }
+   "styles"           { RET(EDJE_STYLES); }
+   "style"            { RET(EDJE_STYLE); }
    "script"
 {
    while (c++ && (*c != '}'))
@@ -198,13 +200,12 @@ toplevel_block ::= data.
    EDJE_APPEND(data, DATA, Edje_Data);
    DATA = NULL;
 }
-/*
-toplevel_block ::= styles_block(B).
+toplevel_block ::= styles.
 {
    EDJE_CREATE;
-   EDJE_APPEND(styles);
+   EDJE_APPEND(styles, STYLE, Edje_Style);
+   STYLE = NULL;
 }
-*/
 toplevel_block ::= color_classes.
 {
    EDJE_CREATE;
@@ -289,6 +290,13 @@ collections_subblock ::= externals.
    EDJE_STRUCT_APPEND(c, externals, EXTERNAL, Edje_External);
    EXTERNAL = NULL;
 }
+collections_subblock ::= styles.
+{
+   Edje_Collection *c;
+   c = PARSER_CURRENT(COLLECTION, Edje_Collection);
+   EDJE_STRUCT_APPEND(c, styles, STYLE, Edje_Style);
+   STYLE = NULL;
+}
 collections_subblock ::= fonts.
 {
    Edje_Collection *c;
@@ -330,7 +338,58 @@ data_subblock ::= PROPERTY(P) ID(I) ID(J) SEMICOLON.
    edje_parser_token_free(J);
 }
 /********************************* END DATA CODE ****************************************/
-/******************************** START SET CODE ***************************************/
+/******************************** START STYLES CODE *************************************/
+styles ::= STYLES LB styles_blocks RB.
+styles ::= STYLES DOT styles_block.
+styles_blocks ::= styles_blocks styles_block.
+styles_blocks ::= styles_block.
+styles_block ::= style.
+
+style ::= style_start style_block.
+style_start ::= doc_comment(C) STYLE.
+{
+   Edje_Style *s;
+
+   EDJE_CREATE;
+   s = edje_style_new();
+   PARSER_APPEND(STYLE, s, Edje_Style);
+   DBG("Style: %p", s);
+   s->doc = C;
+}
+style_block ::= LB style_subblocks RB.
+style_block ::= DOT style_subblock.
+style_subblocks ::= style_subblocks style_subblock.
+style_subblocks ::= style_subblock.
+style_subblock ::= PROPERTY(P) ID(I) SEMICOLON.
+{
+   Edje_Style *s;
+
+   s = PARSER_CURRENT(STYLE, Edje_Style);
+   if (!strcmp(P->text, "name:") && (!s->name))
+     STRINGSHARE_REPLACE_NOQUOTES(s->name, I->text);
+   else if (!strcmp(P->text, "base:") && (!s->base))
+     STRINGSHARE_REPLACE_NOQUOTES(s->base, I->text);
+   else ERROR_SYNTAX(P);
+
+   edje_parser_token_free(P);
+   edje_parser_token_free(I);
+}
+style_subblock ::= PROPERTY(P) ID(I) ID(J) SEMICOLON.
+{
+   Edje_Style *s;
+
+   s = PARSER_CURRENT(STYLE, Edje_Style);
+   if (!strcmp(P->text, "tag:"))
+     eina_hash_add(s->tags, strndupa(I->text + 1, strlen(I->text + 1) - 1),
+       eina_stringshare_add_length(J->text + 1, strlen(J->text + 1) - 1));
+   else ERROR_SYNTAX(P);
+
+   edje_parser_token_free(P);
+   edje_parser_token_free(I);
+   edje_parser_token_free(J);
+}
+/********************************* END STYLES CODE **************************************/
+/******************************** START SET CODE ****************************************/
 set ::= set_start set_block.
 set_start ::= doc_comment(C) SET.
 {
@@ -555,7 +614,7 @@ programs_subblock ::= images_image.
    Edje_Programs *p;
 
    p = PARSER_CURRENT(PROGRAMS, Edje_Programs);
-   EDJE_STRUCT_APPEND(p, set_images, SET_IMAGE, Edje_Set_Image);
+   EDJE_STRUCT_APPEND(p, images, SET_IMAGE, Edje_Set_Image);
    SET_IMAGE = NULL;
 }
 programs_subblock ::= images.
@@ -899,7 +958,7 @@ images_subblock ::= images_image.
    Edje_Images *i;
 
    i = PARSER_CURRENT(IMAGES, Edje_Images);
-   EDJE_STRUCT_APPEND(i, set_images, SET_IMAGE, Edje_Set_Image);
+   EDJE_STRUCT_APPEND(i, images, SET_IMAGE, Edje_Set_Image);
    SET_IMAGE = NULL;
 }
 images_subblock ::= set.
@@ -1072,6 +1131,14 @@ group_subblock ::= data.
    EDJE_STRUCT_APPEND(g, data, DATA, Edje_Data);
    DATA = NULL;
 }
+group_subblock ::= styles.
+{
+   Edje_Group *g;
+
+   g = PARSER_CURRENT(GROUP, Edje_Group);
+   EDJE_STRUCT_APPEND(g, styles, STYLE, Edje_Style);
+   STYLE = NULL;
+}
 group_subblock ::= script(S).
 {
    Edje_Group *g;
@@ -1209,6 +1276,11 @@ parts_subblock ::= set.
    EDJE_STRUCT_APPEND(PARTS, sets, SET, Edje_Set);
    SET = NULL;
 }
+parts_subblock ::= styles.
+{
+   EDJE_STRUCT_APPEND(PARTS, styles, STYLE, Edje_Style);
+   STYLE = NULL;
+}
 parts_subblock ::= part.
 {
    EDJE_STRUCT_APPEND(PARTS, parts, PART, Edje_Part);
@@ -1301,6 +1373,14 @@ part_subblock ::= set.
    EDJE_STRUCT_APPEND(p, sets, SET, Edje_Set);
    SET = NULL;
 }
+part_subblock ::= styles.
+{
+   Edje_Part *p;
+
+   p = PARSER_CURRENT(PART, Edje_Part);
+   EDJE_STRUCT_APPEND(p, styles, STYLE, Edje_Style);
+   STYLE = NULL;
+}
 part_subblock ::= color_classes.
 {
    Edje_Part *p;
@@ -1382,6 +1462,14 @@ part_description_subblock ::= font.
    p = PARSER_CURRENT(DESCRIPTION, Edje_Part_Description);
    EDJE_STRUCT_APPEND(p, fonts, FONT, Edje_Font);
    FONT = NULL;
+}
+part_description_subblock ::= style.
+{
+   Edje_Part_Description *p;
+
+   p = PARSER_CURRENT(DESCRIPTION, Edje_Part_Description);
+   EDJE_STRUCT_APPEND(p, styles, STYLE, Edje_Style);
+   STYLE = NULL;
 }
 part_description_subblock ::= programs.
 {
