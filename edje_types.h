@@ -46,8 +46,8 @@ typedef enum Edje_Program_Transition
 
 typedef enum Edje_Image_Middle
 {
-   EDJE_IMAGE_MIDDLE_DEFAULT,
    EDJE_IMAGE_MIDDLE_NONE,
+   EDJE_IMAGE_MIDDLE_DEFAULT,
    EDJE_IMAGE_MIDDLE_SOLID
 } Edje_Image_Middle;
 
@@ -187,7 +187,7 @@ typedef struct Edje_Image
    const char           *normal;
    Eina_List            *tween; /* stringshared tween filenames */
    int                   border[4];
-   Edje_Set_Image        images;
+   Edje_Set_Image       *images;
    Edje_Set             *sets;
    Edje_Images          *imageses;
    Edje_Image_Middle     middle;
@@ -341,7 +341,20 @@ typedef struct Edje_Part_Description
       int zplane;
       int focal;
    } perspective;
-
+   struct
+   {
+      Eina_Bool smooth : 1;
+      struct
+      {
+         double relative[2];
+         int offset[2];
+      } origin;
+      struct
+      {
+         double relative[2];
+         int offset[2];
+      } size;
+   } fill;
    float                             align[2];
    float                             aspect[2];
    int                               min[2];
@@ -358,7 +371,7 @@ typedef struct Edje_Part_Description
    Eina_Hash                        *params; /* Edje_Param */
    Edje_Fonts                       *fontses;
    Edje_Font                        *fonts;
-   Edje_Image                       *images;
+   Edje_Image                       *image;
    Edje_Images                      *imageses;
    Edje_Color_Class                 *color_classes;
    Edje_Program                     *programs;
