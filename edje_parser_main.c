@@ -103,18 +103,18 @@ compile_setup(const char *file_in)
     */
    if (ecore_file_exists("/usr/ccs/lib/cpp"))
      {
-        eina_strbuf_append_printf(buf, "/usr/ccs/lib/cpp -P %s %s %s", eina_strbuf_string_get(inc), eina_strbuf_string_get(defs), file_in);
+        eina_strbuf_append_printf(buf, "/usr/ccs/lib/cpp -P -C %s %s %s", eina_strbuf_string_get(inc), eina_strbuf_string_get(defs), file_in);
         cmds = eina_list_append(cmds, eina_strbuf_string_steal(buf));
-        eina_strbuf_append_printf(buf, "cc -E -P %s %s %s", eina_strbuf_string_get(inc), eina_strbuf_string_get(defs), file_in);
+        eina_strbuf_append_printf(buf, "cc -E -P -C %s %s %s", eina_strbuf_string_get(inc), eina_strbuf_string_get(defs), file_in);
         cmds = eina_list_append(cmds, eina_strbuf_string_steal(buf));
      }
 
    /* Trying gcc and other syntax */
-   eina_strbuf_append_printf(buf, "%s -E -P -std=c99 %s %s - < %s", getenv("CC") ? getenv("CC") : "cc",
+   eina_strbuf_append_printf(buf, "%s -E -P -C -std=c99 %s %s - < %s", getenv("CC") ? getenv("CC") : "cc",
      inc ? eina_strbuf_string_get(inc) : "", defs ? eina_strbuf_string_get(defs) : "", file_in);
    cmds = eina_list_append(cmds, eina_strbuf_string_steal(buf));
    /* Trying suncc syntax */
-   eina_strbuf_append_printf(buf, "%s -E -P -xc99 %s %s - < %s", getenv("CC") ? getenv("CC") : "cc",
+   eina_strbuf_append_printf(buf, "%s -E -P -C -xc99 %s %s - < %s", getenv("CC") ? getenv("CC") : "cc",
      inc ? eina_strbuf_string_get(inc) : "", defs ? eina_strbuf_string_get(defs) : "", file_in);
    cmds = eina_list_append(cmds, eina_strbuf_string_steal(buf));
 
