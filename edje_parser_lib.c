@@ -62,7 +62,6 @@ edje_parser_strtod(const char *text,
    errno = 0;
    *d = strtod(text, NULL);
    if (errno) return EINA_FALSE;
-   if (*d < 0.0) return EINA_FALSE;
 
    return EINA_TRUE;
 }
@@ -78,8 +77,8 @@ edje_parser_strtobool(const char *text,
 
 Eina_Bool
 edje_parser_parse_color(Edje_Parser *ep,
-                        Edje_Token  *P,
-                        Edje_Token  *I[],
+                        Edje_Parser_Token  *P,
+                        Edje_Parser_Token  *I[],
                         int         *color[])
 {
    size_t len;
@@ -116,8 +115,8 @@ edje_parser_parse_color(Edje_Parser *ep,
 
 Eina_Bool
 edje_parser_parse_min(Edje_Parser *ep,
-                      Edje_Token  *I,
-                      Edje_Token  *J,
+                      Edje_Parser_Token  *I,
+                      Edje_Parser_Token  *J,
                       int         *min,
                       int         *max)
 {
@@ -154,8 +153,8 @@ edje_parser_parse_min(Edje_Parser *ep,
 
 Eina_Bool
 edje_parser_parse_max(Edje_Parser *ep,
-                      Edje_Token  *I,
-                      Edje_Token  *J,
+                      Edje_Parser_Token  *I,
+                      Edje_Parser_Token  *J,
                       int         *min,
                       int         *max)
 {
@@ -224,17 +223,17 @@ edje_parser_stream_next(Edje_Stream *s,
      }
 }
 
-Edje_Token *
+Edje_Parser_Token *
 edje_parser_token_new(Edje_Stream *s,
                       int          type,
                       int          length)
 {
    int i;
-   Edje_Token *t;
+   Edje_Parser_Token *t;
 
    EINA_SAFETY_ON_NULL_RETURN_VAL(s, NULL);
 
-   t = calloc(1, sizeof(Edje_Token));
+   t = calloc(1, sizeof(Edje_Parser_Token));
    EINA_SAFETY_ON_NULL_RETURN_VAL(t, NULL);
 
    t->type = type;
@@ -259,7 +258,7 @@ edje_parser_token_new(Edje_Stream *s,
 }
 
 void
-edje_parser_token_free(Edje_Token *t)
+edje_parser_token_free(Edje_Parser_Token *t)
 {
    EINA_SAFETY_ON_NULL_RETURN(t);
 
@@ -275,7 +274,7 @@ edje_parser_parse(Edje_Parser        *parser,
                   Edje_Token_Cb       token_cb)
 {
    void *p;
-   Edje_Token *t;
+   Edje_Parser_Token *t;
    Edje_Stream *s;
    int retval = -1;
 
