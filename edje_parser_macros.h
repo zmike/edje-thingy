@@ -23,9 +23,9 @@
 #define EDJE_CREATE if (!EDJE) EDJE = edje_new()
 /* retrieve current TYPE from NAME in parser struct */
 #define PARSER_CURRENT(NAME, TYPE)                                                    \
-  EINA_INLIST_CONTAINER_GET(                                                          \
+  (NAME) ? EINA_INLIST_CONTAINER_GET(                                                          \
     EINA_INLIST_GET(NAME)->last ? EINA_INLIST_GET(NAME)->last : EINA_INLIST_GET(NAME) \
-    , TYPE)
+    , TYPE) : NULL
 
 /* stringshares "string" without quotes */
 #define STRINGSHARE_REPLACE_NOQUOTES(VAR, TEXT) \
@@ -69,7 +69,7 @@
          {                                                                                 \
             eina_stringshare_del(ep->error);                                               \
             ep->error = eina_stringshare_printf(                                           \
-                "Syntax error on line %d column %d: unexpected token %s: '%s'\n",          \
+                "Syntax error around line %d column %d: unexpected token %s: '%s'\n",          \
                 TOKEN->sline + 1, TOKEN->scol + 1, yyTokenName[TOKEN->type], TOKEN->text); \
          }                                                                                 \
        ERR("%s", ep->error);                                                               \
@@ -77,14 +77,14 @@
 #define ERROR_RANGE(TOKEN)  do {                                           \
        eina_stringshare_del(ep->error);                                    \
        ep->error = eina_stringshare_printf(                                \
-           "Syntax error on line %d column %d: Out of range value '%s'\n", \
+           "Syntax error around line %d column %d: Out of range value '%s'\n", \
            TOKEN->sline + 1, TOKEN->scol + 1, TOKEN->text);                \
        ERR("%s", ep->error);                                               \
   } while (0)
 #define ERROR_TYPE(TOKEN)   do {                                                            \
        eina_stringshare_del(ep->error);                                                     \
        ep->error = eina_stringshare_printf(                                                 \
-           "Syntax error on line %d column %d: Block type '%s' does not match part type\n", \
+           "Syntax error around line %d column %d: Block type '%s' does not match part type\n", \
            TOKEN->sline + 1, TOKEN->scol + 1, TOKEN->text);                                 \
        ERR("%s", ep->error);                                                                \
   } while (0)
