@@ -356,7 +356,7 @@ typedef struct Edje_Part_Description
       } size;
    } fill;
    float                             align[2];
-   float                             aspect[2];
+   double                            aspect[2];
    int                               min[2];
    int                               max[2];
    int                               step[2];

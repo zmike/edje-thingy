@@ -1688,9 +1688,9 @@ part_description_property ::= PROPERTY(P) NUMBER(I) NUMBER(J) SEMICOLON.
      }
    else if (!strcmp(P->text, "aspect:"))
      {
-        if (!edje_parser_strtof(I->text, &p->aspect[0]))
+        if (!edje_parser_strtod(I->text, &p->aspect[0]))
           ERROR_RANGE(I);
-        if (!edje_parser_strtof(J->text, &p->aspect[1]))
+        if (!edje_parser_strtod(J->text, &p->aspect[1]))
           ERROR_RANGE(J);
      }
    else if (!strcmp(P->text, "min:"))
