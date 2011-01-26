@@ -17,7 +17,7 @@
 
 %name edje_parser_
 %token_prefix EDJE_
-%token_type {Edje_Token *}
+%token_type {Edje_Parser_Token *}
 %token_destructor {edje_parser_token_free($$);}
 %extra_argument {Edje_Parser *ep}
 %syntax_error {ERROR_SYNTAX(TOKEN);}
@@ -49,13 +49,13 @@ extern void *edje_parser_Alloc(void *(*)(size_t));
 extern void  edje_parser_Free(void *, void (*)(void *));
 extern void  edje_parser_(void *,
                          int,
-                         Edje_Token *,
+                         Edje_Parser_Token *,
                          Edje_Parser *);
 /* for reference
 extern void        edje_parser_Trace(FILE *,
                                     char *);
 */
-   static Edje_Token *
+   static Edje_Parser_Token *
    edje_parser_stream_to_token(Edje_Stream *s)
    {
       const char *c, *b, *q;
@@ -84,6 +84,8 @@ main:
    "/*"               { goto commentblock; }
    [ \t\n\r]+         { NEXT; goto main; }
 
+   "\""[\043-\176 !]+"\"" { RET(EDJE_ID); }
+   ([a-z]N*)":"       { RET(EDJE_PROPERTY); }
    "collections"      { RET(EDJE_COLLECTIONS); }
    "set"              { RET(EDJE_SET); }
    "externals"        { RET(EDJE_EXTERNALS); }
@@ -92,7 +94,11 @@ main:
    "color_class"      { RET(EDJE_COLOR_CLASS); }
    "images"           { RET(EDJE_IMAGES); }
    "image"            { RET(EDJE_IMAGE); }
+   "fill"             { RET(EDJE_FILL); }
+   "origin"           { RET(EDJE_ORIGIN); }
+   "size"             { RET(EDJE_SIZE); }
    "set"              { RET(EDJE_SET); }
+   "dragable"         { RET(EDJE_DRAGABLE); }
    "description"      { RET(EDJE_DESCRIPTION); }
    "fonts"            { RET(EDJE_FONTS); }
    "text"             { RET(EDJE_TEXT); }
@@ -120,8 +126,6 @@ main:
    "COMP"             { RET(EDJE_COMP); }
    "LOSSY"            { RET(EDJE_LOSSY); }
    "USER"             { RET(EDJE_USER); }
-   "\""[\043-\176 !]+"\"" { RET(EDJE_ID); }
-   ([a-z]N+)":"       { RET(EDJE_PROPERTY); }
 
    [A-Z_]+             { RET(EDJE_CAPS); }
    "{"                { RET(EDJE_LB); }
@@ -236,7 +240,7 @@ script(S) ::= EMBRYO(E).
      q--;
 
    S = eina_stringshare_add_length(p, q - p + 1);
-   DBG("Script: '%s'", S);
+   DBG("Script:\n%s", S);
    edje_parser_token_free(E);
 }
 /******************************* START COLLECTIONS CODE *********************************/
@@ -252,6 +256,7 @@ collection_start ::= doc_comment(C) COLLECTIONS.
    c->doc = C;
 }
 collection_block ::= LB collections_subblocks RB.
+collection_block ::= LB RB.
 collections_subblocks ::= collections_subblocks collections_subblock.
 collections_subblocks ::= collections_subblock.
 
@@ -309,6 +314,7 @@ collections_subblock ::= fonts.
 data ::= data_start data_block.
 data_start ::= doc_comment DATA.
 data_block ::= LB data_subblocks RB.
+data_block ::= LB RB.
 data_block ::= DOT data_subblock.
 data_subblocks ::= data_subblocks data_subblock.
 data_subblocks ::= data_subblock.
@@ -340,6 +346,7 @@ data_subblock ::= PROPERTY(P) ID(I) ID(J) SEMICOLON.
 /********************************* END DATA CODE ****************************************/
 /******************************** START STYLES CODE *************************************/
 styles ::= STYLES LB styles_blocks RB.
+styles ::= STYLES LB RB.
 styles ::= STYLES DOT styles_block.
 styles_blocks ::= styles_blocks styles_block.
 styles_blocks ::= styles_block.
@@ -357,6 +364,7 @@ style_start ::= doc_comment(C) STYLE.
    s->doc = C;
 }
 style_block ::= LB style_subblocks RB.
+style_block ::= LB RB.
 style_block ::= DOT style_subblock.
 style_subblocks ::= style_subblocks style_subblock.
 style_subblocks ::= style_subblock.
@@ -402,6 +410,7 @@ set_start ::= doc_comment(C) SET.
    s->doc = C;
 }
 set_block ::= LB set_subblocks RB.
+set_block ::= LB RB.
 set_block ::= DOT set_subblock.
 set_subblocks ::= set_subblocks set_subblock.
 set_subblocks ::= set_subblock.
@@ -429,6 +438,7 @@ set_image_start ::= doc_comment(C) IMAGE.
    s->doc = C;
 }
 set_image_block ::= LB set_image_subblocks RB.
+set_image_block ::= LB RB.
 set_image_block ::= DOT set_image_subblock.
 set_image_subblocks ::= set_image_subblock set_image_subblock.
 set_image_subblocks ::= set_image_subblock.
@@ -436,7 +446,7 @@ set_image_subblock ::= images_image.
 set_image_subblock ::= PROPERTY(P) NUMBER(I) NUMBER(J) NUMBER(K) NUMBER(L) SEMICOLON.
 {
    Edje_Set_Image *s;
-   Edje_Token *t[4];
+   Edje_Parser_Token *t[4];
    unsigned int i;
 
    t[0] = I;
@@ -446,7 +456,7 @@ set_image_subblock ::= PROPERTY(P) NUMBER(I) NUMBER(J) NUMBER(K) NUMBER(L) SEMIC
 
    s = PARSER_CURRENT(SET_IMAGE, Edje_Set_Image);
 
-   for (i = 0; i < sizeof(t); i++)
+   for (i = 0; i < 4; i++)
      {
         if (!edje_parser_strtol(t[i]->text, &s->size[i]))
           {
@@ -466,6 +476,7 @@ set_image_subblock ::= PROPERTY(P) NUMBER(I) NUMBER(J) NUMBER(K) NUMBER(L) SEMIC
 externals ::= externals_start externals_block.
 externals_start ::= doc_comment EXTERNALS.
 externals_block ::= LB externals_subblocks RB.
+externals_block ::= LB RB.
 externals_block ::= DOT externals_subblock.
 externals_subblocks ::= externals_subblocks externals_subblock.
 externals_subblocks ::= externals_subblock.
@@ -499,6 +510,7 @@ fonts_start ::= doc_comment(C) FONTS.
    f->doc = C;
 }
 fonts_block ::= LB fonts_subblocks RB.
+fonts_block ::= LB RB.
 fonts_block ::= DOT fonts_subblock.
 fonts_subblocks ::= fonts_subblocks fonts_subblock.
 fonts_subblocks ::= fonts_subblock.
@@ -533,6 +545,7 @@ font ::= doc_comment(C) FONT COLON ID(I) ID(J) SEMICOLON.
 color_classes ::= color_classes_start color_classes_block.
 color_classes_start ::= doc_comment COLOR_CLASSES.
 color_classes_block ::= LB color_class RB.
+color_classes_block ::= LB RB.
 
 color_class ::= color_class color_class_start color_class_block.
 color_class ::= color_class_start color_class_block.
@@ -545,6 +558,7 @@ color_class_start ::= doc_comment(C) COLOR_CLASS.
    c->doc = C;
 }
 color_class_block ::= LB color_class_properties RB.
+color_class_block ::= LB RB.
 color_class_properties ::= color_class_properties color_class_property.
 color_class_properties ::= color_class_property.
 color_class_property ::= PROPERTY ID(I) SEMICOLON.
@@ -561,7 +575,7 @@ color_class_property ::= PROPERTY(P) NUMBER(I) NUMBER(J) NUMBER(K) NUMBER(L) SEM
 
    Edje_Color_Class *c;
    int *colors[3];
-   Edje_Token *tokens[4];
+   Edje_Parser_Token *tokens[4];
 
    c = PARSER_CURRENT(COLOR_CLASS, Edje_Color_Class);
 
@@ -573,7 +587,7 @@ color_class_property ::= PROPERTY(P) NUMBER(I) NUMBER(J) NUMBER(K) NUMBER(L) SEM
    colors[0] = c->color;
    colors[1] = c->color2;
    colors[2] = c->color3;
-   if (!edje_parser_parse_color(ep, P, (Edje_Token**)tokens, (int**)colors) && (!ep->error))
+   if (!edje_parser_parse_color(ep, P, (Edje_Parser_Token**)tokens, (int**)colors) && (!ep->error))
      ERROR_SYNTAX(P);
 
    edje_parser_token_free(P);
@@ -596,6 +610,7 @@ programs_start ::= doc_comment(C) PROGRAMS.
    p->doc = C;
 }
 programs_blocks ::= LB programs_subblocks RB.
+programs_blocks ::= LB RB.
 programs_blocks ::= DOT programs_subblock.
 programs_subblocks ::= programs_subblocks programs_subblock.
 programs_subblocks ::= programs_subblock.
@@ -664,6 +679,7 @@ program_start ::= doc_comment(C) PROGRAM.
    p->doc = C;
 }
 program_blocks ::= LB program_subblocks RB.
+program_blocks ::= LB RB.
 program_blocks ::= DOT program_subblock.
 program_subblocks ::= program_subblocks program_subblock.
 program_subblocks ::= program_subblock.
@@ -725,9 +741,9 @@ program_subblock ::= PROPERTY(P) NUMBER(I) NUMBER(J) SEMICOLON.
    DBG("Program property - '%s' '%s' '%s'", P->text, I->text, J->text);
    if (!strcmp(P->text, "in:"))
      {
-        if (!edje_parser_strtod(I->text, &p->in.from))
+        if (!edje_parser_strtod(I->text, &p->in.from) || (p->in.from < 0.0))
           ERROR_RANGE(I);
-        else if (!edje_parser_strtod(J->text, &p->in.range))
+        else if (!edje_parser_strtod(J->text, &p->in.range) || (p->in.range < 0.0))
           ERROR_RANGE(J);
      }
    else ERROR_SYNTAX(P);
@@ -925,7 +941,7 @@ program_subblock ::= PROPERTY(P) CAPS(C) NUMBER(I) SEMICOLON.
         
         if (!p->action.transition.type)
           ERROR_SYNTAX(I);
-        else if (!edje_parser_strtof(I->text, (float*)&p->action.transition.length))
+        else if (!edje_parser_strtod(I->text, &p->action.transition.length))
           ERROR_RANGE(I);
 #undef EDJE_ACTION_CHECK
      }
@@ -949,6 +965,7 @@ images_start ::= doc_comment(C) IMAGES.
    i->doc = C;
 }
 images_blocks ::= LB images_subblocks RB.
+images_blocks ::= LB RB.
 images_blocks ::= DOT images_subblock.
 images_subblocks ::= images_subblocks images_subblock.
 images_subblocks ::= images_subblock.
@@ -1053,6 +1070,7 @@ group_start ::= doc_comment(C) GROUP.
    g->doc = C;
 }
 group_block ::= LB group_subblocks RB.
+group_block ::= LB RB.
 group_block ::= DOT group_subblock.
 
 /*************************** GROUP SUB-BLOCKS ************************************/
@@ -1237,6 +1255,7 @@ parts_start ::= doc_comment(C) PARTS.
    p->doc = C;
 }
 parts_block ::= LB parts_subblocks RB.
+parts_block ::= LB RB.
 /******************************* PARTS SUB-BLOCKS ********************************/
 parts_subblocks ::= parts_subblocks parts_subblock.
 parts_subblocks ::= parts_subblock.
@@ -1329,10 +1348,70 @@ part_start ::= doc_comment(C) PART.
    p->doc = C;
 }
 part_block ::= LB part_subblocks RB.
+part_block ::= LB RB.
 /******************************* PART SUB-BLOCKS ********************************/
 part_subblocks ::= part_subblocks part_subblock.
 part_subblocks ::= part_subblock.
+/***************************************** DRAGABLE *************************************/
+part_subblock ::= part_dragable.
+part_dragable ::= part_dragable_start part_dragable_block.
+part_dragable_start ::= DRAGABLE.
+part_dragable_block ::= LB part_dragable_props RB.
+part_dragable_block ::= LB RB.
+part_dragable_block ::= DOT part_dragable_prop.
+part_dragable_props ::= part_dragable_props part_dragable_prop.
+part_dragable_props ::= part_dragable_prop.
 
+part_dragable_prop ::= PROPERTY(P) ID(I) SEMICOLON.
+{
+   Edje_Part *p;
+
+   p = PARSER_CURRENT(PART, Edje_Part);
+   if (!strcmp(P->text, "confine:"))
+     STRINGSHARE_REPLACE_NOQUOTES(p->dragable.confine, I->text);
+   else if (!strcmp(P->text, "events:"))
+     STRINGSHARE_REPLACE_NOQUOTES(p->dragable.events, I->text);
+   else ERROR_SYNTAX(P);
+
+   edje_parser_token_free(P);
+   edje_parser_token_free(I);
+}
+part_dragable_prop ::= PROPERTY(P) NUMBER(I) NUMBER(J) NUMBER(K) SEMICOLON.
+{
+   Edje_Part *p;
+   Edje_Parser_Token *t[3];
+   int i;
+
+   t[0] = I;
+   t[1] = J;
+   t[2] = K;
+
+   p = PARSER_CURRENT(PART, Edje_Part);
+   if (!strcmp(P->text, "x:"))
+     {
+        for (i = 0; i < 3; i++)
+          {
+             if (!edje_parser_strtol(t[i]->text, &p->dragable.x[i]))
+               ERROR_RANGE(t[i]);
+          }
+        if ((p->dragable.x[0] > 1) || (p->dragable.x[0] < 0)) /* first param is bool */
+          ERROR_RANGE(I);
+     }
+   else if (!strcmp(P->text, "y:"))
+     {
+        for (i = 0; i < 3; i++)
+          if (!edje_parser_strtol(t[i]->text, &p->dragable.y[i]))
+            ERROR_RANGE(t[i]);
+        if ((p->dragable.y[0] > 1) || (p->dragable.y[0] < 0))  /* first param is bool */
+          ERROR_RANGE(I);
+     }
+   else ERROR_SYNTAX(P);
+   
+   edje_parser_token_free(P);
+   edje_parser_token_free(I);
+   edje_parser_token_free(J);
+   edje_parser_token_free(K);
+}
 part_subblock ::= fonts.
 {
    Edje_Part *p;
@@ -1426,6 +1505,7 @@ part_description_start ::= doc_comment(C) DESCRIPTION.
    p->doc = C;
 }
 part_description_block ::= LB part_description_subblocks RB.
+part_description_block ::= LB RB.
 part_description_block ::= DOT part_description_subblock.
 /******************************* DESC SUB-BLOCKS ********************************/
 part_description_subblocks ::= part_description_subblocks part_description_subblock.
@@ -1653,7 +1733,7 @@ part_description_property ::= PROPERTY(P) NUMBER(I) NUMBER(J) NUMBER(K) NUMBER(L
 {
    Edje_Part_Description *p;
    int *colors[3];
-   Edje_Token *tokens[4];
+   Edje_Parser_Token *tokens[4];
 
    p = PARSER_CURRENT(DESCRIPTION, Edje_Part_Description);
    DBG("Part desc property: %s:%s %s %s %s", P->text, I->text, J->text, K->text, L->text);
@@ -1664,7 +1744,7 @@ part_description_property ::= PROPERTY(P) NUMBER(I) NUMBER(J) NUMBER(K) NUMBER(L
    colors[0] = p->color;
    colors[1] = p->color2;
    colors[2] = p->color3;
-   if (!edje_parser_parse_color(ep, P, (Edje_Token**)tokens, (int**)colors) && (!ep->error))
+   if (!edje_parser_parse_color(ep, P, (Edje_Parser_Token**)tokens, (int**)colors) && (!ep->error))
      ERROR_SYNTAX(P);
 
    edje_parser_token_free(P);
@@ -1678,6 +1758,7 @@ part_description_subblock ::= part_description_params.
 part_description_params ::= part_description_params_start part_description_params_block.
 part_description_params_start ::= PARAMS.
 part_description_params_block ::= LB part_description_params_subblocks RB.
+part_description_params_block ::= LB RB.
 part_description_params_block ::= DOT part_description_params_subblock.
 part_description_params_subblocks ::= part_description_params_subblocks part_description_params_subblock.
 part_description_params_subblocks ::= part_description_params_subblock.
@@ -1775,6 +1856,7 @@ part_description_subblock ::= part_description_perspective.
 part_description_perspective ::= part_description_perspective_start part_description_perspective_block.
 part_description_perspective_start ::= PERSPECTIVE.
 part_description_perspective_block ::= LB part_description_perspective_subblocks RB.
+part_description_perspective_block ::= LB RB.
 part_description_perspective_block ::= DOT part_description_perspective_subblock.
 part_description_perspective_subblocks ::= part_description_perspective_subblocks part_description_perspective_subblock.
 part_description_perspective_subblocks ::= part_description_perspective_subblock.
@@ -1798,7 +1880,248 @@ part_description_perspective_subblock ::= PROPERTY(P) NUMBER(I) SEMICOLON.
    edje_parser_token_free(P);
    edje_parser_token_free(I);
 }
-/***************************************** TEXT ******************************************/
+/***************************************** IMAGE *****************************************/
+part_description_subblock ::= part_description_image.
+part_description_image ::= part_description_image_start part_description_image_block.
+part_description_image_start ::= doc_comment(C) IMAGE.
+{
+   Edje_Part_Description *p;
+   Edje_Image *i;
+
+   p = PARSER_CURRENT(DESCRIPTION, Edje_Part_Description);
+   if (!p->image)
+     p->image = edje_image_new();
+   i = p->image;
+   DBG("Image: %p", i);
+   i->doc = C;
+}
+part_description_image_block ::= LB part_description_image_subblocks RB.
+part_description_image_block ::= LB RB.
+part_description_image_block ::= DOT part_description_image_subblock.
+part_description_image_subblocks ::= part_description_image_subblocks part_description_image_subblock.
+part_description_image_subblocks ::= part_description_image_subblock.
+part_description_image_subblock ::= PROPERTY(P) ID(I) SEMICOLON.
+{
+   Edje_Part_Description *p;
+   Edje_Image *i;
+
+   p = PARSER_CURRENT(DESCRIPTION, Edje_Part_Description);
+   i = p->image;
+   if (!strcmp(P->text, "normal:"))
+     STRINGSHARE_REPLACE_NOQUOTES(i->normal, I->text);
+   else if (!strcmp(P->text, "tween:"))
+     i->tween = eina_list_append(i->tween, eina_stringshare_add_length(I->text + 1, strlen(I->text + 1) - 1));
+   else ERROR_SYNTAX(P);
+
+   edje_parser_token_free(P);
+   edje_parser_token_free(I);
+}
+part_description_image_subblock ::= PROPERTY(P) NUMBER(I) NUMBER(J) NUMBER(K) NUMBER(L) SEMICOLON.
+{
+   Edje_Part_Description *p;
+   Edje_Image *i;
+   Edje_Parser_Token *t[4];
+   unsigned int x;
+
+   t[0] = I;
+   t[1] = J;
+   t[2] = K;
+   t[3] = L;
+
+   p = PARSER_CURRENT(DESCRIPTION, Edje_Part_Description);
+   i = p->image;
+   if (!strcmp(P->text, "border:"))
+     {
+        for (x = 0; x < 4; x++)
+          {
+             if (!edje_parser_strtol(t[x]->text, &i->border[x]))
+               ERROR_RANGE(t[x]);
+          }
+     }
+   else ERROR_SYNTAX(P);
+
+   edje_parser_token_free(P);
+   edje_parser_token_free(I);
+   edje_parser_token_free(J);
+   edje_parser_token_free(K);
+   edje_parser_token_free(L);
+}
+part_description_image_subblock ::= PROPERTY(P) CAPS(I) SEMICOLON.
+{
+   Edje_Part_Description *p;
+   Edje_Image *i;
+
+   p = PARSER_CURRENT(DESCRIPTION, Edje_Part_Description);
+   i = p->image;
+   if (!strcmp(P->text, "middle:"))
+     {
+        if (!strcmp(I->text, "NONE"))
+          i->middle = EDJE_IMAGE_MIDDLE_NONE;
+        else if (!strcmp(I->text, "DEFAULT"))
+          i->middle = EDJE_IMAGE_MIDDLE_DEFAULT;
+        else if (!strcmp(I->text, "SOLID"))
+          i->middle = EDJE_IMAGE_MIDDLE_SOLID;
+        else ERROR_SYNTAX(I);
+     }
+   else if (!strcmp(P->text, "scale_hint:"))
+     {
+        if (!strcmp(I->text, "NONE"))
+          i->middle = EDJE_IMAGE_SCALE_HINT_NONE;
+        else if (!strcmp(I->text, "DYNAMIC"))
+          i->middle = EDJE_IMAGE_SCALE_HINT_DYNAMIC;
+        else if (!strcmp(I->text, "STATIC"))
+          i->middle = EDJE_IMAGE_SCALE_HINT_STATIC;
+     }
+   else ERROR_SYNTAX(P);
+
+   edje_parser_token_free(P);
+   edje_parser_token_free(I);
+}
+part_description_image_subblock ::= PROPERTY(P) NUMBER(I) SEMICOLON.
+{
+   Edje_Part_Description *p;
+   Edje_Image *i;
+
+   p = PARSER_CURRENT(DESCRIPTION, Edje_Part_Description);
+   i = p->image;
+   if (!strcmp(P->text, "middle:"))
+     {
+        if (!strcmp(I->text, "0"))
+          i->middle = EDJE_IMAGE_MIDDLE_NONE;
+        else if (!strcmp(I->text, "1"))
+          i->middle = EDJE_IMAGE_MIDDLE_DEFAULT;
+        else ERROR_SYNTAX(I);
+     }
+   else if (!strcmp(P->text, "scale_hint:"))
+     {
+        if (!strcmp(I->text, "0"))
+          i->middle = EDJE_IMAGE_SCALE_HINT_NONE;
+     }
+   else ERROR_SYNTAX(P);
+
+   edje_parser_token_free(P);
+   edje_parser_token_free(I);
+}
+part_description_image_subblock ::= images_image.
+{
+   Edje_Part_Description *p;
+   Edje_Image *i;
+
+   p = PARSER_CURRENT(DESCRIPTION, Edje_Part_Description);
+   i = p->image;
+   EDJE_STRUCT_APPEND(i, images, SET_IMAGE, Edje_Set_Image);
+   SET_IMAGE = NULL;
+}
+part_description_image_subblock ::= set.
+{
+   Edje_Part_Description *p;
+   Edje_Image *i;
+
+   p = PARSER_CURRENT(DESCRIPTION, Edje_Part_Description);
+   i = p->image;
+   EDJE_STRUCT_APPEND(i, sets, SET, Edje_Set);
+   SET = NULL;
+}
+part_description_image_subblock ::= images.
+{
+   Edje_Part_Description *p;
+   Edje_Image *i;
+
+   p = PARSER_CURRENT(DESCRIPTION, Edje_Part_Description);
+   i = p->image;
+   EDJE_STRUCT_APPEND(i, imageses, IMAGES, Edje_Images);
+   IMAGES = NULL;
+}
+/**************************************** FILL *******************************************/
+part_description_subblock ::= part_description_fill.
+part_description_fill ::= part_description_fill_start part_description_fill_block.
+part_description_fill_start ::= FILL.
+part_description_fill_block ::= LB part_description_fill_subblocks RB.
+part_description_fill_block ::= LB RB.
+part_description_fill_block ::= DOT part_description_fill_subblock.
+part_description_fill_subblocks ::= part_description_fill_subblocks part_description_fill_subblock.
+part_description_fill_subblocks ::= part_description_fill_subblock.
+
+part_description_fill_subblock ::= PROPERTY(P) NUMBER(I) SEMICOLON.
+{
+   Edje_Part_Description *p;
+
+   p = PARSER_CURRENT(DESCRIPTION, Edje_Part_Description);
+   if (!strcmp(P->text, "smooth:"))
+     {
+        int x;
+        if (!edje_parser_strtobool(I->text, &x))
+          ERROR_RANGE(I);
+        p->fill.smooth = !!x;
+     }
+   else ERROR_SYNTAX(P);
+
+   edje_parser_token_free(P);
+   edje_parser_token_free(I);
+}
+part_description_fill_subblock ::= ORIGIN LB part_description_fill_subblock_origin_subblocks RB.
+part_description_fill_subblock ::= ORIGIN LB RB.
+part_description_fill_subblock ::= ORIGIN DOT part_description_fill_subblock_origin_subblock.
+part_description_fill_subblock_origin_subblocks ::= part_description_fill_subblock_origin_subblocks part_description_fill_subblock_origin_subblock.
+part_description_fill_subblock_origin_subblocks ::= part_description_fill_subblock_origin_subblock.
+part_description_fill_subblock_origin_subblock ::= PROPERTY(P) NUMBER(I) NUMBER(J) SEMICOLON.
+{
+   Edje_Part_Description *p;
+
+   p = PARSER_CURRENT(DESCRIPTION, Edje_Part_Description);
+
+   if (!strcmp(P->text, "relative:"))
+     {
+        if (!edje_parser_strtod(I->text, &p->fill.origin.relative[0]))
+          ERROR_RANGE(I);
+        else if (!edje_parser_strtod(J->text, &p->fill.origin.relative[1]))
+          ERROR_RANGE(J);
+     }
+   else if (!strcmp(P->text, "offset:"))
+     {
+        if (!edje_parser_strtol(I->text, &p->fill.origin.offset[0]))
+          ERROR_RANGE(I);
+        else if (!edje_parser_strtol(J->text, &p->fill.origin.offset[1]))
+          ERROR_RANGE(J);
+     }
+   else ERROR_SYNTAX(P);
+
+   edje_parser_token_free(P);
+   edje_parser_token_free(I);
+   edje_parser_token_free(J);
+}
+part_description_fill_subblock ::= SIZE LB part_description_fill_subblock_size_subblocks RB.
+part_description_fill_subblock ::= SIZE LB RB.
+part_description_fill_subblock ::= SIZE DOT part_description_fill_subblock_size_subblock.
+part_description_fill_subblock_size_subblocks ::= part_description_fill_subblock_size_subblocks part_description_fill_subblock_size_subblock.
+part_description_fill_subblock_size_subblocks ::= part_description_fill_subblock_size_subblock.
+part_description_fill_subblock_size_subblock ::= PROPERTY(P) NUMBER(I) NUMBER(J) SEMICOLON.
+{
+   Edje_Part_Description *p;
+
+   p = PARSER_CURRENT(DESCRIPTION, Edje_Part_Description);
+
+   if (!strcmp(P->text, "relative:"))
+     {
+        if (!edje_parser_strtod(I->text, &p->fill.size.relative[0]))
+          ERROR_RANGE(I);
+        else if (!edje_parser_strtod(J->text, &p->fill.size.relative[1]))
+          ERROR_RANGE(J);
+     }
+   else if (!strcmp(P->text, "offset:"))
+     {
+        if (!edje_parser_strtol(I->text, &p->fill.size.offset[0]))
+          ERROR_RANGE(I);
+        else if (!edje_parser_strtol(J->text, &p->fill.size.offset[1]))
+          ERROR_RANGE(J);
+     }
+   else ERROR_SYNTAX(P);
+
+   edje_parser_token_free(P);
+   edje_parser_token_free(I);
+   edje_parser_token_free(J);
+}
+/**************************************** TEXT *******************************************/
 part_description_subblock ::= part_description_text.
 part_description_text ::= part_description_text_start part_description_text_block.
 part_description_text_start ::= TEXT(T).
@@ -1811,6 +2134,7 @@ part_description_text_start ::= TEXT(T).
    edje_parser_token_free(T);
 }
 part_description_text_block ::= LB part_description_text_props RB.
+part_description_text_block ::= LB RB.
 part_description_text_block ::= DOT part_description_text_prop.
 part_description_text_props ::= part_description_text_props part_description_text_prop.
 part_description_text_props ::= part_description_text_prop.
@@ -1894,6 +2218,7 @@ part_description_subblock ::= part_description_map.
 part_description_map ::= part_description_map_start part_description_map_block.
 part_description_map_start ::= MAP.
 part_description_map_block ::= LB part_description_map_props RB.
+part_description_map_block ::= LB RB.
 part_description_map_block ::= DOT part_description_map_prop.
 part_description_map_props ::= part_description_map_props part_description_map_prop.
 part_description_map_props ::= part_description_map_prop.
@@ -1940,6 +2265,7 @@ part_description_map_prop ::= part_description_map_rotation.
 part_description_map_rotation ::= part_description_map_rotation_start part_description_map_rotation_block.
 part_description_map_rotation_start ::= ROTATION.
 part_description_map_rotation_block ::= LB part_description_map_rotation_subblocks RB.
+part_description_map_rotation_block ::= LB RB.
 part_description_map_rotation_block ::= DOT part_description_map_rotation_subblock.
 part_description_map_rotation_subblocks ::= part_description_map_rotation_subblocks part_description_map_rotation_subblock.
 part_description_map_rotation_subblocks ::= part_description_map_rotation_subblock.
@@ -1975,7 +2301,6 @@ part_description_map_rotation_subblock ::= PROPERTY(P) NUMBER(I) SEMICOLON.
    edje_parser_token_free(P);
    edje_parser_token_free(I);
 }
-
 /***************************************** REL1/REL2 ************************************/
 part_description_subblock ::= part_description_relone. { REL = NULL; }
 part_description_subblock ::= part_description_reltwo. { REL = NULL; }
@@ -1998,6 +2323,7 @@ part_description_reltwo_start ::= REL2.
    REL = &p->rel[1];
 }
 part_description_rel_props ::= LB relative_properties RB.
+part_description_rel_props ::= LB RB.
 part_description_rel_props ::= DOT relative_property.
 relative_properties ::= relative_properties relative_property.
 relative_properties ::= relative_property.
