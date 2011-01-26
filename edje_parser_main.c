@@ -17,32 +17,33 @@
 
 #include <Eina.h>
 #include <Ecore.h>
+#include <Ecore_Getopt.h>
+#include <Ecore_File.h>
 #include "edje_parser_lib.h"
-
+#ifndef __UNUSED__
+# define __UNUSED__ __attribute__((unused))
+#endif
 int edje_parser_log_dom = 0;
 
 static Edje *edje;
-static char *edje_file;
+static Eina_Strbuf *edje_str;
+static Eina_Strbuf *inc, *defs;
+static Eina_List *cmds;
 
-#if 0
+extern void edje_parser_Trace(FILE *,
+                              char *);
 static const Ecore_Getopt opts = {
    "Edje_Parser",
-   "Edje_Parser file.edje -o destination_directory/",
+   "Edje_Parser [options] file.edc",
    "1.0alpha",
-   "(C) 2011 Mike Blumenkrantz, previously others, see AUTHORS",
+   "(C) 2011 Mike Blumenkrantz",
    "LGPL",
-   "Parse an edje file into *.{c,h} files\n\n",
+   "Parse an edc file\n",
    1,
    {
-      ECORE_GETOPT_STORE_STR('m', "modes", "Parser modes: all, server-impl, server-headers,\n"
-                                           "\t\t\tclient-impl, client-headers,\n"
-                                           "\t\t\tcommon-impl, common-headers"),
-      ECORE_GETOPT_STORE_STR('o', "output", "Output directory (default is .)"),
+      ECORE_GETOPT_APPEND('I', NULL, "Directories from which to include files\n (can be specified repeatedly)", ECORE_GETOPT_TYPE_STR),
+      ECORE_GETOPT_APPEND('D', NULL, "Define a macro/value\n (can be specified repeatedly)", ECORE_GETOPT_TYPE_STR),
       ECORE_GETOPT_STORE_TRUE('d', "debug", "Print debugging output"),
-      ECORE_GETOPT_STORE_TRUE('H', "Hash", "Do not generate hash functions"),
-      ECORE_GETOPT_STORE_TRUE('n', "null", "Do not generate isnull functions"),
-      ECORE_GETOPT_STORE_TRUE('p', "print", "Do not generate print functions"),
-      ECORE_GETOPT_STORE_TRUE('e', "eq", "Do not generate eq functions"),
       ECORE_GETOPT_VERSION('V', "version"),
       ECORE_GETOPT_COPYRIGHT('R', "copyright"),
       ECORE_GETOPT_LICENSE('L', "license"),
@@ -50,70 +51,158 @@ static const Ecore_Getopt opts = {
       ECORE_GETOPT_SENTINEL
    }
 };
-#endif
 
-extern void edje_parser_Trace(FILE *,
-                              char *);
+static Eina_Bool
+compile_data_cb(void *data __UNUSED__, int type __UNUSED__, Ecore_Exe_Event_Data *ev)
+{
+   if (!edje_str) edje_str = eina_strbuf_new();
+   eina_strbuf_append_length(edje_str, (char*)ev->data, ev->size);
+   return ECORE_CALLBACK_RENEW;
+}
 
+static Eina_Bool
+compile_end_cb(void *data __UNUSED__, int type __UNUSED__, Ecore_Exe_Event_Del *ev)
+{
+   if (ev->exit_signal) /* failure */
+     {
+        if (cmds && cmds->data)
+          {
+             free(cmds->data);
+             cmds = eina_list_remove_list(cmds, cmds);
+          }
+        if (cmds)
+          ecore_exe_pipe_run(cmds->data, ECORE_EXE_PIPE_READ, NULL); /* neeext */
+        else /* no more cmds to try, failure all around */
+          {
+             ERR("Could not preprocess file!");
+             ecore_main_loop_quit();
+          }
+     }
+   else
+     ecore_main_loop_quit(); /* success! */
+   return ECORE_CALLBACK_RENEW;
+}
+
+/* from edje_cc_parse.c...sort of */
+void
+compile_setup(const char *file_in)
+{
+   Eina_Strbuf *buf;
+
+   buf = eina_strbuf_new();
+   /*
+    * Run the input through the C pre-processor.
+    */
+
+   /*
+    * On OpenSolaris, the default cpp is located in different places.
+    * Alan Coppersmith told me to do what xorg does: using /usr/ccs/lib/cpp
+    *
+    * Also, that preprocessor is not managing C++ comments, so pass the
+    * sun cc preprocessor just after.
+    */
+   if (ecore_file_exists("/usr/ccs/lib/cpp"))
+     {
+        eina_strbuf_append_printf(buf, "/usr/ccs/lib/cpp -P %s %s %s", eina_strbuf_string_get(inc), eina_strbuf_string_get(defs), file_in);
+        cmds = eina_list_append(cmds, eina_strbuf_string_steal(buf));
+        eina_strbuf_append_printf(buf, "cc -E -P %s %s %s", eina_strbuf_string_get(inc), eina_strbuf_string_get(defs), file_in);
+        cmds = eina_list_append(cmds, eina_strbuf_string_steal(buf));
+     }
+
+   /* Trying gcc and other syntax */
+   eina_strbuf_append_printf(buf, "%s -E -P -std=c99 %s %s - < %s", getenv("CC") ? getenv("CC") : "cc",
+     inc ? eina_strbuf_string_get(inc) : "", defs ? eina_strbuf_string_get(defs) : "", file_in);
+   cmds = eina_list_append(cmds, eina_strbuf_string_steal(buf));
+   /* Trying suncc syntax */
+   eina_strbuf_append_printf(buf, "%s -E -P -xc99 %s %s - < %s", getenv("CC") ? getenv("CC") : "cc",
+     inc ? eina_strbuf_string_get(inc) : "", defs ? eina_strbuf_string_get(defs) : "", file_in);
+   cmds = eina_list_append(cmds, eina_strbuf_string_steal(buf));
+
+
+   ecore_exe_pipe_run(cmds->data, ECORE_EXE_PIPE_READ, NULL); /* try first cmd */
+   eina_strbuf_free(buf);
+}
 
 int
 main(int   argc,
      char *argv[])
 {
    Eina_Bool err;
-#if 0
    Eina_Bool debug = EINA_FALSE;
    Eina_Bool exit_option = EINA_FALSE;
+   Eina_List *includes = NULL;
+   Eina_List *defines = NULL;
+   char *edje_file;
    int args;
-   char *modes = "all";
 
    Ecore_Getopt_Value values[] =
    {
-      ECORE_GETOPT_VALUE_STR(modes),
-      ECORE_GETOPT_VALUE_STR(out_dir),
+      ECORE_GETOPT_VALUE_LIST(includes),
+      ECORE_GETOPT_VALUE_LIST(defines),
       ECORE_GETOPT_VALUE_BOOL(debug),
-      ECORE_GETOPT_VALUE_BOOL(hash_funcs),
-      ECORE_GETOPT_VALUE_BOOL(isnull_funcs),
-      ECORE_GETOPT_VALUE_BOOL(print_funcs),
-      ECORE_GETOPT_VALUE_BOOL(eq_funcs),
       ECORE_GETOPT_VALUE_BOOL(exit_option),
       ECORE_GETOPT_VALUE_BOOL(exit_option),
       ECORE_GETOPT_VALUE_BOOL(exit_option),
       ECORE_GETOPT_VALUE_BOOL(exit_option)
    };
-#endif
+
    eina_init();
    ecore_init();
    ecore_app_args_set(argc, (const char **)argv);
    edje_parser_log_dom = eina_log_domain_register("edje_parser", EINA_COLOR_YELLOW);
    eina_log_domain_level_set("edje_parser", EINA_LOG_LEVEL_DBG);
-/*
-   args = ecore_getopt_parse(&opts, values, argc, argv);
-   if (args < 0)
-     return 1;
 
-   if (exit_option)
-     return 0;
- */
-   edje_file = argv[1];
+   args = ecore_getopt_parse(&opts, values, argc, argv);
+   if (args < 0) return 1;
+   if (exit_option) return 0;
+
+   edje_file = argv[args];
 
    if (!edje_file)
      {
-        printf("You must specify the .edc file.\n");
+        ERR("You must specify the .edc file.");
         return 1;
      }
-
-   edje_parser_Trace(stdout, "Edje_Parser: ");
+   if (includes)
+     {
+        Eina_List *l;
+        const char *i;
+        inc = eina_strbuf_new();
+        EINA_LIST_FOREACH(includes, l, i)
+           eina_strbuf_append_printf(inc, "-I%s%s", i, l->next ? " " : "");
+     }
+   if (defines)
+     {
+        Eina_List *l;
+        const char *i;
+        defs = eina_strbuf_new();
+        EINA_LIST_FOREACH(defines, l, i)
+           eina_strbuf_append_printf(defs, "-D%s%s", i, l->next ? " " : "");
+     }
+   if (debug) edje_parser_Trace(stdout, "Edje_Parser: ");
+   ecore_event_handler_add(ECORE_EXE_EVENT_DATA, (Ecore_Event_Handler_Cb)compile_data_cb, NULL);
+   ecore_event_handler_add(ECORE_EXE_EVENT_DEL, (Ecore_Event_Handler_Cb)compile_end_cb, NULL);
+   compile_setup(edje_file);
+   ecore_main_loop_begin();
    err = EINA_FALSE;
-   edje = edje_parse_file(edje_file, &err);
-   if ((!edje) || (err))
+   edje = edje_parse_string(eina_strbuf_string_get(edje_str), &err);
+   if ((!edje) || err)
      {
         printf("Error parsing file!\n");
         exit(1);
      }
 
-   //if (debug)
-   printf("edje-parser: Done!!\n");
+   if (debug) printf("edje-parser: Done!!\n");
+/* cleanup for reference
+   eina_strbuf_free(edje_str);
+   eina_strbuf_free(inc);
+   eina_strbuf_free(defs);
+   {
+      char *s;
+      EINA_LIST_FREE(cmds, s)
+        free(s);
+   }
+*/ 
    return 0;
 }
 
