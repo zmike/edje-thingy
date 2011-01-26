@@ -59,7 +59,7 @@ extern void        edje_parser_Trace(FILE *,
    edje_parser_stream_to_token(Edje_Stream *s)
    {
       const char *c, *b, *q;
-      int brace_open = 0;
+      int brace_open = 0, brace_close = 0;
 
       if (s->length == s->index)
         return edje_parser_token_new(s, EDJE_EOF, 0);
@@ -111,9 +111,13 @@ main:
    "style"            { RET(EDJE_STYLE); }
    "script"
 {
-   while (c++ && (*c != '}'))
-     if (*c == '{') brace_open++;
-   goto scriptblock;
+   while (c++)
+     {
+        if (*c == '{') brace_open++;
+        else if (*c == '}') brace_close++;
+        if (brace_open && (*c == '}') && (brace_open == brace_close)) RET(EDJE_EMBRYO);
+     }
+   RET(EDJE_UNKNOWN);
 }
    "font"             { RET(EDJE_FONT); }
    "rel1"             { RET(EDJE_REL1); }
@@ -141,13 +145,6 @@ main:
 
  */
 
-scriptblock:
-/*!re2c
-  "{"         { brace_open++; c++; goto scriptblock; }
-  "}"         { if (--brace_open < 1) RET(EDJE_EMBRYO); c++; goto scriptblock; }
-  [^{}]       { c++; goto scriptblock; }
-  ENDINPUT             { RET(EDJE_UNKNOWN); }
-*/
 
 commentblock:
 /*!re2c
@@ -236,7 +233,7 @@ script(S) ::= EMBRYO(E).
    while (p && (isspace(*p) || (*p == '{')))
      p++;
    q = E->text + eina_stringshare_strlen(E->text) - 1;
-   while (q && (isspace(*q) || (*q == '}')))
+   while (q && (isspace(*q)))
      q--;
 
    S = eina_stringshare_add_length(p, q - p + 1);
