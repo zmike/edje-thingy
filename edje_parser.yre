@@ -84,7 +84,7 @@ main:
    "/*"               { goto commentblock; }
    [ \t\n\r]+         { NEXT; goto main; }
 
-   "\""[\043-\176 !]+"\"" { RET(EDJE_ID); }
+   "\""[\043-\176 !]*"\"" { RET(EDJE_ID); }
    ([a-z]N*)":"       { RET(EDJE_PROPERTY); }
    "collections"      { RET(EDJE_COLLECTIONS); }
    "set"              { RET(EDJE_SET); }
@@ -580,7 +580,6 @@ color_class_property ::= PROPERTY(P) NUMBER(I) NUMBER(J) NUMBER(K) NUMBER(L) SEM
 
    c = PARSER_CURRENT(COLOR_CLASS, Edje_Color_Class);
 
-   DBG("Color class property: %s:%s %s %s %s", P->text, I->text, J->text, K->text, L->text);
    tokens[0] = I;
    tokens[1] = J;
    tokens[2] = K;
@@ -698,7 +697,6 @@ program_subblock ::= PROPERTY(P) ID(I) SEMICOLON.
    Edje_Program *p;
 
    p = PARSER_CURRENT(PROGRAM, Edje_Program);
-   DBG("Program property - '%s' '%s'", P->text, I->text);
    if (!strcmp(P->text, "name:"))
      STRINGSHARE_REPLACE_NOQUOTES(p->name, I->text);
    else if (!strcmp(P->text, "signal:"))
@@ -718,7 +716,6 @@ program_subblock ::= PROPERTY(P) ID(I) ID(J) SEMICOLON.
    Edje_Program *p;
 
    p = PARSER_CURRENT(PROGRAM, Edje_Program);
-   DBG("Program property - '%s' '%s' '%s'", P->text, I->text, J->text);
    if (!strcmp(P->text, "api:"))
      {
         STRINGSHARE_REPLACE_NOQUOTES(p->api.name, I->text);
@@ -739,7 +736,6 @@ program_subblock ::= PROPERTY(P) NUMBER(I) NUMBER(J) SEMICOLON.
    Edje_Program *p;
 
    p = PARSER_CURRENT(PROGRAM, Edje_Program);
-   DBG("Program property - '%s' '%s' '%s'", P->text, I->text, J->text);
    if (!strcmp(P->text, "in:"))
      {
         if (!edje_parser_strtod(I->text, &p->in.from) || (p->in.from < 0.0))
@@ -1182,7 +1178,6 @@ group_property ::= PROPERTY(P) ID(I) SEMICOLON. /* property: "value"; */
    Edje_Group *g;
 
    g = PARSER_CURRENT(GROUP, Edje_Group);
-   DBG("Group property - '%s':'%s'", P->text, I->text);
    if (!strcmp(P->text, "alias:"))
      STRINGSHARE_REPLACE_NOQUOTES(g->alias, I->text);
    else if (!strcmp(P->text, "name:"))
@@ -1199,7 +1194,6 @@ group_property ::= PROPERTY(P) NUMBER(I) SEMICOLON. /* property: bool */
    int i;
 
    g = PARSER_CURRENT(GROUP, Edje_Group);
-   DBG("Group property - '%s':'%s'", P->text, I->text);
    if (strcmp(P->text, "script_only:"))
      {
         ERROR_SYNTAX(P);
@@ -1222,7 +1216,6 @@ group_property ::= PROPERTY(P) NUMBER(I) NUMBER(J) SEMICOLON. /* property: int i
    Edje_Group *g;
 
    g = PARSER_CURRENT(GROUP, Edje_Group);
-   DBG("Property: '%s'", P->text);
    if (!strcmp(P->text, "min:"))
      {
         if (!edje_parser_parse_min(ep, I, J, g->min, g->max))
@@ -1582,7 +1575,6 @@ part_description_property ::= PROPERTY(P) ID(I) SEMICOLON.
     Edje_Part_Description *p;
 
     p = PARSER_CURRENT(DESCRIPTION, Edje_Part_Description);
-    DBG("Desc property - '%s':'%s'", P->text, I->text);
 
     if (!strcmp(P->text, "color_class:"))
       STRINGSHARE_REPLACE_NOQUOTES(p->color_class, I->text);
@@ -1596,7 +1588,6 @@ part_description_property ::= PROPERTY(P) CAPS(I) SEMICOLON.
     Edje_Part_Description *p;
 
     p = PARSER_CURRENT(DESCRIPTION, Edje_Part_Description);
-    DBG("Desc property - '%s':'%s'", P->text, I->text);
 
     if (!strcmp(P->text, "aspect_preference:"))
       {
@@ -1621,7 +1612,6 @@ part_description_property ::= PROPERTY(P) NUMBER(I) SEMICOLON.
     int i;
 
     p = PARSER_CURRENT(DESCRIPTION, Edje_Part_Description);
-    DBG("Desc property - '%s':'%s'", P->text, I->text);
 
    if (!edje_parser_strtobool(I->text, &i))
      {
@@ -1643,7 +1633,6 @@ part_description_property ::= PROPERTY(P) ID(I) NUMBER(D) SEMICOLON.
     float d;
 
     p = PARSER_CURRENT(DESCRIPTION, Edje_Part_Description);
-    DBG("Desc property - '%s':'%s %s'", P->text, I->text, D->text);
 
     if (!edje_parser_strtof(D->text, &d))
       {
@@ -1674,7 +1663,6 @@ part_description_property ::= PROPERTY(P) NUMBER(I) NUMBER(J) SEMICOLON.
     int i, j;
 
     p = PARSER_CURRENT(DESCRIPTION, Edje_Part_Description);
-    DBG("Desc property - '%s':'%s %s'", P->text, I->text, J->text);
 
    if (!strcmp(P->text, "fixed:"))
      {
@@ -1737,7 +1725,6 @@ part_description_property ::= PROPERTY(P) NUMBER(I) NUMBER(J) NUMBER(K) NUMBER(L
    Edje_Parser_Token *tokens[4];
 
    p = PARSER_CURRENT(DESCRIPTION, Edje_Part_Description);
-   DBG("Part desc property: %s:%s %s %s %s", P->text, I->text, J->text, K->text, L->text);
    tokens[0] = I;
    tokens[1] = J;
    tokens[2] = K;
@@ -2371,7 +2358,6 @@ part_property ::= PROPERTY(P) ID(I) SEMICOLON.
    Edje_Part *p;
 
    p = PARSER_CURRENT(PART, Edje_Part);
-   DBG("Part property - '%s':'%s'", P->text, I->text);
 #define EDJE_PART_CHECK(TYPE) \
 if (!strcmp(P->text, #TYPE":")) \
   STRINGSHARE_REPLACE_NOQUOTES(p->TYPE, I->text)
@@ -2394,7 +2380,6 @@ part_property ::= PROPERTY(P) CAPS(C) SEMICOLON.
    Edje_Part *p;
 
    p = PARSER_CURRENT(PART, Edje_Part);
-   DBG("Part property - '%s':'%s'", P->text, C->text);
    if (!strcmp(P->text, "type:"))
      {
 #define EDJE_PART_CHECK(TYPE) \
@@ -2483,7 +2468,6 @@ part_property ::= PROPERTY(P) NUMBER(I) SEMICOLON.
    int i;
 
    p = PARSER_CURRENT(PART, Edje_Part);
-   DBG("Part property - '%s':'%s'", P->text, I->text);
 
    if (!edje_parser_strtobool(I->text, &i))
      {
