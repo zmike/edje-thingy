@@ -20,6 +20,7 @@
 #include <fcntl.h>
 #include <unistd.h>
 #include <errno.h>
+#include "edje_parser.h"
 #include "edje_parser_lib.h"
 #include "edje_parser_macros.h"
 
@@ -241,6 +242,21 @@ edje_parser_token_new(Edje_Stream *s,
    t->length = length;
    t->sline = t->eline = s->line;
    t->scol = t->ecol = s->col;
+
+   switch (type)
+     {
+      case EDJE_PROPERTY:
+        DBG("PROPERTY [%i]: %s", t->sline, t->text);
+        break;
+      case EDJE_ID:
+        DBG("ID [%i]: %s", t->sline, t->text);
+        break;
+      case EDJE_NUMBER:
+        DBG("NUMBER [%i]: %s", t->sline, t->text);
+        break;
+      default:
+        break;
+     }
 
    for (i = 0; i < length; i++)
      {
