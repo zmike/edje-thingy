@@ -20,6 +20,20 @@ typedef enum Edje_Compression_Type
    EDJE_COMPRESSION_TYPE_USER
 } Edje_Compression_Type;
 
+typedef enum Edje_Box_Layout
+{
+   EDJE_BOX_LAYOUT_HORIZONTAL,
+   EDJE_BOX_LAYOUT_VERTICAL,
+   EDJE_BOX_LAYOUT_HORIZONTAL_HOMOGENEOUS,
+   EDJE_BOX_LAYOUT_VERTICAL_HOMOGENEOUS,
+   EDJE_BOX_LAYOUT_HORIZONTAL_MAX,
+   EDJE_BOX_LAYOUT_VERTICAL_MAX,
+   EDJE_BOX_LAYOUT_HORIZONTAL_FLOW,
+   EDJE_BOX_LAYOUT_VERTICAL_FLOW,
+   EDJE_BOX_LAYOUT_STACK,
+   EDJE_BOX_LAYOUT_CUSTOM
+} Edje_Box_Layout;
+
 typedef enum Edje_Program_Action
 {
    EDJE_PROGRAM_ACTION_UNKNOWN,
@@ -86,6 +100,7 @@ typedef enum Edje_Part_Pointer_Mode
 
 typedef enum Edje_Part_Effect
 {
+   EDJE_PART_EFFECT_NONE,
    EDJE_PART_EFFECT_PLAIN,
    EDJE_PART_EFFECT_OUTLINE,
    EDJE_PART_EFFECT_SOFT_OUTLINE,
@@ -293,12 +308,12 @@ typedef struct Edje_Part_Description
    struct
    {
       const char *name;
-      float       index;
+      double       index;
    } inherit;
    struct
    {
       const char *name;
-      float       index;
+      double       index;
    } state;
    union
    {
@@ -311,8 +326,8 @@ typedef struct Edje_Part_Description
          const char *repch;
          const char *source;
          const char *text_source;
-         float       elipsis;
-         float       align[2];
+         double       elipsis;
+         double       align[2];
          int         size;
          Eina_Bool   fit[2];
          Eina_Bool   min[2];
@@ -330,11 +345,19 @@ typedef struct Edje_Part_Description
          struct
          {
             const char *center;
-            float       x;
-            float       y;
-            float       z;
+            double       x;
+            double       y;
+            double       z;
          } rotation;
       } map;
+      struct
+      {
+         Edje_Box_Layout primary;
+         Edje_Box_Layout fallback;
+         double align[2];
+         int padding[2];
+         Eina_Bool min[2];
+      } box;
    } type;
    struct
    {
@@ -355,7 +378,7 @@ typedef struct Edje_Part_Description
          int    offset[2];
       } size;
    } fill;
-   float                             align[2];
+   double                             align[2];
    double                            aspect[2];
    int                               min[2];
    int                               max[2];
