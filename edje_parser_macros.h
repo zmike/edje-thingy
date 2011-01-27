@@ -29,7 +29,13 @@
 
 /* stringshares "string" without quotes */
 #define STRINGSHARE_REPLACE_NOQUOTES(VAR, TEXT) \
-  eina_stringshare_replace_length(&VAR, TEXT + 1, strlen(TEXT + 1) - 1)
+  (TEXT[0] == '"') ? \
+    eina_stringshare_replace_length(&VAR, TEXT + 1, strlen(TEXT + 1) - 1) : \
+    eina_stringshare_replace(&VAR, TEXT)
+#define STRINGSHARE_ADD_NOQUOTES(TEXT) \
+  (TEXT[0] == '"') ? \
+    eina_stringshare_add_length(TEXT + 1, strlen(TEXT + 1) - 1) : \
+    eina_stringshare_add(TEXT)
 /*************************** APPEND MACROS ********************************/
 /* append to parser for temp storage */
 #define PARSER_APPEND(NAME, APPEND, TYPE)                                    \
