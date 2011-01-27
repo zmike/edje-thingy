@@ -1,7 +1,4 @@
 edje_parser
-edje_parser.c
-edje_parser.h
 edje_parser.out
-edje_parser.y
 lemon
 
