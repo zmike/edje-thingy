@@ -77,6 +77,9 @@ main:
    ENDINPUT   = "\000";
    D     = [-]?[0-9]+;
    N     = [a-z0-9_];
+   QUOTED_STR = ("\""[\043-\176 !]*"\"");
+   UNQUOTED_STR = ([!\044-\055\057-\071\074-\172|~]+);
+   DOUBLE = D?"."[0-9]+;
 
    SL_COMMENT = "//" (.\ENDINPUT)* ("\n"|ENDINPUT);
 
@@ -136,7 +139,7 @@ main:
 
    ";"                { RET(EDJE_SEMICOLON); }
    "."                { RET(EDJE_DOT); }
-   ("\""[\043-\176 !]*"\"")|([!\044-\055\057-\071\074-\172|~]+)|(D?"."?[0-9]+) { RET(EDJE_ID); }
+   QUOTED_STR|UNQUOTED_STR|((UNQUOTED_STR)?(DOUBLE)(UNQUOTED_STR)?)+ { RET(EDJE_ID); }
    ENDINPUT           { RET(EDJE_EOF); }
    NONPRINT           { RET(EDJE_UNKNOWN); }
 
