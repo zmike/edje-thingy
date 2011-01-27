@@ -226,7 +226,8 @@ edje_parser_token_new(Edje_Stream *s,
         q = strchr(s->buffer + s->index + 1, '"');
         for (; q && (q - (s->buffer + s->index) < length); q = strchr(q + 1, '"'))
           {
-             eina_strbuf_append_length(buf, qq + 1, q - qq - 1);
+             if (q - qq > 1)
+               eina_strbuf_append_length(buf, qq + 1, q - qq - 1);
              qq = q;
           }
         t->text = eina_strbuf_string_steal(buf);
