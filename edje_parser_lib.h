@@ -21,10 +21,10 @@
 #include <Eina.h>
 #include "edje.h"
 
+#define EDJE_DOUBLEQUOTES (-2)
 typedef struct
 {
-   const char *path;
-   const char *buffer;
+   char *buffer;
    int         index;
    int         line;
    int         col;
@@ -34,7 +34,7 @@ typedef struct
 typedef struct
 {
    int         type;
-   const char *text; /* stringshared text */
+   char *text; /* text */
    int         length;
    int         sline; /* token location (starts from 0) */
    int         scol;
@@ -75,8 +75,10 @@ Eina_Bool edje_parser_parse_color(Edje_Parser * ep,
                                   Edje_Parser_Token * P,
                                   Edje_Parser_Token * I[],
                                   int *color[]);
-Eina_Bool edje_parser_strtobool(const char *text,
-                                int        *i);
+Eina_Bool
+edje_parser_property_check(const char *in,
+                           const char *cmp);
+
 Eina_Bool edje_parser_parse_min(Edje_Parser       *ep,
                                 Edje_Parser_Token *I,
                                 Edje_Parser_Token *J,

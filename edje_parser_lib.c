@@ -29,8 +29,27 @@ static void
 edje_parser_stream_free(Edje_Stream *s)
 {
    if (!s) return;
-   if (s->buffer) eina_stringshare_del(s->buffer);
+   if (s->buffer) free(s->buffer);
    free(s);
+}
+
+Eina_Bool
+edje_parser_property_check(const char *in,
+                           const char *cmp)
+{
+   size_t lcmp;
+
+   lcmp = strlen(cmp);
+
+   if (!strncmp(in, cmp, lcmp))
+     {
+        for (in += lcmp; *in; in++)
+          {
+             if (*in == ':') return EINA_FALSE;
+             if (*in != ' ') return EINA_TRUE;
+          }
+     }
+   return EINA_TRUE;
 }
 
 Eina_Bool
@@ -156,8 +175,8 @@ edje_parser_stream_new(const char *str)
 
    s = calloc(1, sizeof(Edje_Stream));
    EINA_SAFETY_ON_NULL_RETURN_VAL(s, NULL);
-   s->buffer = eina_stringshare_add(str);
-   s->length = eina_stringshare_strlen(s->buffer);
+   s->buffer = strdup(str);
+   s->length = strlen(s->buffer);
    return s;
 }
 
@@ -195,7 +214,25 @@ edje_parser_token_new(Edje_Stream *s,
    EINA_SAFETY_ON_NULL_RETURN_VAL(t, NULL);
 
    t->type = type;
-   t->text = eina_stringshare_add_length(s->buffer + s->index, length);
+   if (type != EDJE_DOUBLEQUOTES)
+     t->text = strndup(s->buffer + s->index, length);
+   else
+     {
+        const char *q, *qq;
+        Eina_Strbuf *buf;
+
+        buf = eina_strbuf_new();
+        qq = s->buffer + s->index;
+        q = strchr(s->buffer + s->index + 1, '"');
+        for (; q && (q - (s->buffer + s->index) < length); q = strchr(q + 1, '"'))
+          {
+             eina_strbuf_append_length(buf, qq + 1, q - qq - 1);
+             qq = q;
+          }
+        t->text = eina_strbuf_string_steal(buf);
+        t->type = EDJE_ID;
+        eina_strbuf_free(buf);
+     }
    t->length = length;
    t->sline = t->eline = s->line;
    t->scol = t->ecol = s->col;
@@ -208,6 +245,8 @@ edje_parser_token_new(Edje_Stream *s,
 
       case EDJE_ID:
         DBG("ID [%i]: %s", t->sline, t->text);
+        if (!strcmp(t->text, "RESIZE"))
+          printf("\n");
         break;
 
       default:
@@ -234,7 +273,7 @@ edje_parser_token_free(Edje_Parser_Token *t)
 {
    EINA_SAFETY_ON_NULL_RETURN(t);
 
-   eina_stringshare_del(t->text);
+   if (t->text) free(t->text);
    free(t);
 }
 
@@ -314,7 +353,7 @@ edje_parser_string_parse(const char         *str,
 
    if (parser->error)
      {
-        fprintf(stderr, "%s\n", parser->error);
+        ERR("%s", parser->error);
         *err = EINA_TRUE;
      }
 
