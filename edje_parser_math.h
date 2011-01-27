@@ -22,9 +22,9 @@
 #include "edje.h"
 Eina_Bool edje_parser_strtol(const char *text,
                              int        *i);
-Eina_Bool edje_parser_strtof(const char *text,
-                             float      *f);
 Eina_Bool edje_parser_strtod(const char *text,
                              double     *d);
+Eina_Bool edje_parser_strtobool(const char *text,
+                                int        *i);
 
 #endif

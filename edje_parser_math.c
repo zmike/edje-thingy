@@ -448,20 +448,6 @@ edje_parser_strtol(const char *text,
 }
 
 Eina_Bool
-edje_parser_strtof(const char *text,
-                   float      *f)
-{
-   const char *end;
-   Eina_Bool err = EINA_FALSE;
-
-   end = _alphaf(text, (double *)f, &err);
-   if (end && end[0]) err = EINA_TRUE;
-   if ((*f > 1.0) || (*f < 0.0)) err = EINA_TRUE;
-
-   return !err;
-}
-
-Eina_Bool
 edje_parser_strtod(const char *text,
                    double     *d)
 {
