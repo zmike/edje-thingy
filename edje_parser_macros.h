@@ -36,6 +36,10 @@
   (TEXT[0] == '"') ?                                            \
   eina_stringshare_add_length(TEXT + 1, strlen(TEXT + 1) - 1) : \
   eina_stringshare_add(TEXT)
+#define STRDUPA_NOQUOTES(TEXT) \
+        (TEXT[0] == '"') ?                                            \
+  strndupa(TEXT + 1, strlen(TEXT + 1) - 1) : \
+  strdupa(TEXT)
 /*************************** APPEND MACROS ********************************/
 /* append to parser for temp storage */
 #define PARSER_APPEND(NAME, APPEND, TYPE)                                    \
