@@ -153,7 +153,6 @@ main(int   argc,
    ecore_init();
    ecore_app_args_set(argc, (const char **)argv);
    edje_parser_log_dom = eina_log_domain_register("edje_parser", EINA_COLOR_YELLOW);
-   eina_log_domain_level_set("edje_parser", EINA_LOG_LEVEL_DBG);
 
    args = ecore_getopt_parse(&opts, values, argc, argv);
    if (args < 0) return 1;
@@ -182,7 +181,11 @@ main(int   argc,
         EINA_LIST_FOREACH(defines, l, i)
           eina_strbuf_append_printf(defs, "-D%s%s", i, l->next ? " " : "");
      }
-   if (debug) edje_parser_Trace(stdout, "Edje_Parser: ");
+   if (debug)
+     {
+        edje_parser_Trace(stdout, "Edje_Parser: ");
+        eina_log_domain_level_set("edje_parser", EINA_LOG_LEVEL_DBG);
+     }
    ecore_event_handler_add(ECORE_EXE_EVENT_DATA, (Ecore_Event_Handler_Cb)compile_data_cb, NULL);
    ecore_event_handler_add(ECORE_EXE_EVENT_DEL, (Ecore_Event_Handler_Cb)compile_end_cb, NULL);
    compile_setup(edje_file);
