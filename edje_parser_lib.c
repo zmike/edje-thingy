@@ -37,9 +37,10 @@ Eina_Bool
 edje_parser_strtol(const char *text,
                    int        *i)
 {
+   char *end;
    errno = 0;
-   *i = strtol(text, NULL, 10);
-   if (errno) return EINA_FALSE;
+   *i = strtol(text, &end, 10);
+   if (errno || (end && end[0])) return EINA_FALSE;
 
    return EINA_TRUE;
 }
@@ -48,9 +49,10 @@ Eina_Bool
 edje_parser_strtof(const char *text,
                    float      *f)
 {
+   char *end;
    errno = 0;
-   *f = strtof(text, NULL);
-   if (errno) return EINA_FALSE;
+   *f = strtof(text, &end);
+   if (errno || (end && end[0])) return EINA_FALSE;
    if ((*f > 1.0) || (*f < 0.0)) return EINA_FALSE;
 
    return EINA_TRUE;
@@ -60,9 +62,10 @@ Eina_Bool
 edje_parser_strtod(const char *text,
                    double     *d)
 {
+   char *end;
    errno = 0;
-   *d = strtod(text, NULL);
-   if (errno) return EINA_FALSE;
+   *d = strtod(text, &end);
+   if (errno || (end && end[0])) return EINA_FALSE;
 
    return EINA_TRUE;
 }
@@ -250,9 +253,6 @@ edje_parser_token_new(Edje_Stream *s,
         break;
       case EDJE_ID:
         DBG("ID [%i]: %s", t->sline, t->text);
-        break;
-      case EDJE_NUMBER:
-        DBG("NUMBER [%i]: %s", t->sline, t->text);
         break;
       default:
         break;
