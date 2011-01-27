@@ -27,6 +27,7 @@
 #include "edje_parser_lib.h"
 #include "edje.h"
 #include "edje_parser.h"
+#include "edje_parser_math.h"
 #include "edje_parser_macros.h"
 #include <ctype.h>
 #include <errno.h>

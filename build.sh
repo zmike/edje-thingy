@@ -1,5 +1,5 @@
 #!/bin/bash
-CFLAGS="-O0 -pipe -Wall -Wextra -g -ggdb3 $(pkg-config --cflags --libs ecore-file) -DHAVE_ALLOCA_H -D_GNU_SOURCE"
+CFLAGS="-O0 -pipe -Wall -Wextra -g -ggdb3 $(pkg-config --cflags --libs ecore-file) -DHAVE_ALLOCA_H -D_GNU_SOURCE -lm"
 
 [[ -f lemon ]] || gcc -o lemon lemon.c -g
 

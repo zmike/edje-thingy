@@ -23,6 +23,7 @@
 #include "edje_parser.h"
 #include "edje_parser_lib.h"
 #include "edje_parser_macros.h"
+#include "edje_parser_math.h"
 
 static void
 edje_parser_stream_free(Edje_Stream *s)
@@ -30,53 +31,6 @@ edje_parser_stream_free(Edje_Stream *s)
    if (!s) return;
    if (s->buffer) eina_stringshare_del(s->buffer);
    free(s);
-}
-
-/* handle errno more easily */
-Eina_Bool
-edje_parser_strtol(const char *text,
-                   int        *i)
-{
-   char *end;
-   errno = 0;
-   *i = strtol(text, &end, 10);
-   if (errno || (end && end[0])) return EINA_FALSE;
-
-   return EINA_TRUE;
-}
-
-Eina_Bool
-edje_parser_strtof(const char *text,
-                   float      *f)
-{
-   char *end;
-   errno = 0;
-   *f = strtof(text, &end);
-   if (errno || (end && end[0])) return EINA_FALSE;
-   if ((*f > 1.0) || (*f < 0.0)) return EINA_FALSE;
-
-   return EINA_TRUE;
-}
-
-Eina_Bool
-edje_parser_strtod(const char *text,
-                   double     *d)
-{
-   char *end;
-   errno = 0;
-   *d = strtod(text, &end);
-   if (errno || (end && end[0])) return EINA_FALSE;
-
-   return EINA_TRUE;
-}
-
-Eina_Bool
-edje_parser_strtobool(const char *text,
-                      int        *i)
-{
-   if (!edje_parser_strtol(text, i) || ((*i != 1) && (*i != 0)))
-     return EINA_FALSE;
-   return EINA_TRUE;
 }
 
 Eina_Bool

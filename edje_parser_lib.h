@@ -87,12 +87,7 @@ Eina_Bool edje_parser_parse_max(Edje_Parser       *ep,
                                 Edje_Parser_Token *J,
                                 int               *min,
                                 int               *max);
-Eina_Bool    edje_parser_strtol(const char *text,
-                                int        *i);
-Eina_Bool    edje_parser_strtof(const char *text,
-                                float      *f);
-Eina_Bool    edje_parser_strtod(const char *text,
-                                double     *d);
+
 Edje_Stream *edje_parser_stream_new(const char *str);
 void         edje_parser_stream_next(Edje_Stream *s,
                                      int          length);
