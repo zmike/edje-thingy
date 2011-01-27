@@ -80,7 +80,6 @@ DEF(Edje_Font, edje_font)
 DEF(Edje_Fonts, edje_fonts)
 DEF(Edje_Group, edje_group)
 DEF(Edje_Part, edje_part)
-DEF(Edje_Param, edje_param)
 DEF(Edje_Program, edje_program)
 DEF(Edje_Programs, edje_programs)
 
@@ -100,6 +99,17 @@ edje_param_free(Edje_Param *e)
         break;
      }
    free(e);
+}
+
+Edje_Param *
+edje_param_new(Edje_Param_Type type)
+{
+   Edje_Param *e;
+
+   e = calloc(1, sizeof(Edje_Param));
+   EINA_SAFETY_ON_NULL_RETURN_VAL(e, NULL);
+   e->type = type;
+   return e;
 }
 
 Edje_Data *
