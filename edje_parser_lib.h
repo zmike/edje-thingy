@@ -67,9 +67,9 @@ typedef struct
    Edje_Style                     *style;
 } Edje_Parser;
 
-typedef void *      (*Edje_Parser_New_Cb)(void *(*)(size_t));
-typedef void        (*Edje_Parser_Free_Cb)(void *, void (*)(void *));
-typedef void        (*Edje_Parser_Cb)(void *, int, Edje_Parser_Token *, Edje_Parser *);
+typedef void *             (*Edje_Parser_New_Cb)(void *(*)(size_t));
+typedef void               (*Edje_Parser_Free_Cb)(void *, void (*)(void *));
+typedef void               (*Edje_Parser_Cb)(void *, int, Edje_Parser_Token *, Edje_Parser *);
 typedef Edje_Parser_Token *(*Edje_Token_Cb)(Edje_Stream *);
 Eina_Bool edje_parser_parse_color(Edje_Parser * ep,
                                   Edje_Parser_Token * P,
@@ -77,16 +77,16 @@ Eina_Bool edje_parser_parse_color(Edje_Parser * ep,
                                   int *color[]);
 Eina_Bool edje_parser_strtobool(const char *text,
                                 int        *i);
-Eina_Bool edje_parser_parse_min(Edje_Parser *ep,
-                                Edje_Parser_Token  *I,
-                                Edje_Parser_Token  *J,
-                                int         *min,
-                                int         *max);
-Eina_Bool edje_parser_parse_max(Edje_Parser *ep,
-                                Edje_Parser_Token  *I,
-                                Edje_Parser_Token  *J,
-                                int         *min,
-                                int         *max);
+Eina_Bool edje_parser_parse_min(Edje_Parser       *ep,
+                                Edje_Parser_Token *I,
+                                Edje_Parser_Token *J,
+                                int               *min,
+                                int               *max);
+Eina_Bool edje_parser_parse_max(Edje_Parser       *ep,
+                                Edje_Parser_Token *I,
+                                Edje_Parser_Token *J,
+                                int               *min,
+                                int               *max);
 Eina_Bool    edje_parser_strtol(const char *text,
                                 int        *i);
 Eina_Bool    edje_parser_strtof(const char *text,
@@ -98,8 +98,8 @@ void         edje_parser_stream_next(Edje_Stream *s,
                                      int          length);
 
 Edje_Parser_Token *edje_parser_token_new(Edje_Stream *s,
-                                  int          type,
-                                  int          length);
+                                         int          type,
+                                         int          length);
 void  edje_parser_token_free(Edje_Parser_Token *t);
 
 Edje *edje_parser_string_parse(const char         *str,

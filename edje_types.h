@@ -347,12 +347,12 @@ typedef struct Edje_Part_Description
       struct
       {
          double relative[2];
-         int offset[2];
+         int    offset[2];
       } origin;
       struct
       {
          double relative[2];
-         int offset[2];
+         int    offset[2];
       } size;
    } fill;
    float                             align[2];

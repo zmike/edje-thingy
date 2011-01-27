@@ -80,10 +80,10 @@ edje_parser_strtobool(const char *text,
 }
 
 Eina_Bool
-edje_parser_parse_color(Edje_Parser *ep,
-                        Edje_Parser_Token  *P,
-                        Edje_Parser_Token  *I[],
-                        int         *color[])
+edje_parser_parse_color(Edje_Parser       *ep,
+                        Edje_Parser_Token *P,
+                        Edje_Parser_Token *I[],
+                        int               *color[])
 {
    size_t len;
    int *c, i;
@@ -118,11 +118,11 @@ edje_parser_parse_color(Edje_Parser *ep,
 }
 
 Eina_Bool
-edje_parser_parse_min(Edje_Parser *ep,
-                      Edje_Parser_Token  *I,
-                      Edje_Parser_Token  *J,
-                      int         *min,
-                      int         *max)
+edje_parser_parse_min(Edje_Parser       *ep,
+                      Edje_Parser_Token *I,
+                      Edje_Parser_Token *J,
+                      int               *min,
+                      int               *max)
 {
    if ((!I) || (!J) || (!min) || (!max)) return EINA_FALSE;
 
@@ -156,11 +156,11 @@ edje_parser_parse_min(Edje_Parser *ep,
 }
 
 Eina_Bool
-edje_parser_parse_max(Edje_Parser *ep,
-                      Edje_Parser_Token  *I,
-                      Edje_Parser_Token  *J,
-                      int         *min,
-                      int         *max)
+edje_parser_parse_max(Edje_Parser       *ep,
+                      Edje_Parser_Token *I,
+                      Edje_Parser_Token *J,
+                      int               *min,
+                      int               *max)
 {
    if ((!I) || (!J) || (!min) || (!max)) return EINA_FALSE;
 
@@ -251,9 +251,11 @@ edje_parser_token_new(Edje_Stream *s,
       case EDJE_PROPERTY:
         DBG("PROPERTY [%i]: %s", t->sline, t->text);
         break;
+
       case EDJE_ID:
         DBG("ID [%i]: %s", t->sline, t->text);
         break;
+
       default:
         break;
      }

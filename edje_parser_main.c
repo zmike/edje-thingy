@@ -53,15 +53,19 @@ static const Ecore_Getopt opts = {
 };
 
 static Eina_Bool
-compile_data_cb(void *data __UNUSED__, int type __UNUSED__, Ecore_Exe_Event_Data *ev)
+compile_data_cb(void *data            __UNUSED__,
+                int type              __UNUSED__,
+                Ecore_Exe_Event_Data *ev)
 {
    if (!edje_str) edje_str = eina_strbuf_new();
-   eina_strbuf_append_length(edje_str, (char*)ev->data, ev->size);
+   eina_strbuf_append_length(edje_str, (char *)ev->data, ev->size);
    return ECORE_CALLBACK_RENEW;
 }
 
 static Eina_Bool
-compile_end_cb(void *data __UNUSED__, int type __UNUSED__, Ecore_Exe_Event_Del *ev)
+compile_end_cb(void *data           __UNUSED__,
+               int type             __UNUSED__,
+               Ecore_Exe_Event_Del *ev)
 {
    if (ev->exit_signal) /* failure */
      {
@@ -71,7 +75,7 @@ compile_end_cb(void *data __UNUSED__, int type __UNUSED__, Ecore_Exe_Event_Del *
              cmds = eina_list_remove_list(cmds, cmds);
           }
         if (cmds)
-          ecore_exe_pipe_run(cmds->data, ECORE_EXE_PIPE_READ, NULL); /* neeext */
+          ecore_exe_pipe_run(cmds->data, ECORE_EXE_PIPE_READ, NULL);  /* neeext */
         else /* no more cmds to try, failure all around */
           {
              ERR("Could not preprocess file!");
@@ -79,7 +83,7 @@ compile_end_cb(void *data __UNUSED__, int type __UNUSED__, Ecore_Exe_Event_Del *
           }
      }
    else
-     ecore_main_loop_quit(); /* success! */
+     ecore_main_loop_quit();  /* success! */
    return ECORE_CALLBACK_RENEW;
 }
 
@@ -111,13 +115,12 @@ compile_setup(const char *file_in)
 
    /* Trying gcc and other syntax */
    eina_strbuf_append_printf(buf, "%s -E -P -C -std=c99 %s %s - < %s", getenv("CC") ? getenv("CC") : "cc",
-     inc ? eina_strbuf_string_get(inc) : "", defs ? eina_strbuf_string_get(defs) : "", file_in);
+                             inc ? eina_strbuf_string_get(inc) : "", defs ? eina_strbuf_string_get(defs) : "", file_in);
    cmds = eina_list_append(cmds, eina_strbuf_string_steal(buf));
    /* Trying suncc syntax */
    eina_strbuf_append_printf(buf, "%s -E -P -C -xc99 %s %s - < %s", getenv("CC") ? getenv("CC") : "cc",
-     inc ? eina_strbuf_string_get(inc) : "", defs ? eina_strbuf_string_get(defs) : "", file_in);
+                             inc ? eina_strbuf_string_get(inc) : "", defs ? eina_strbuf_string_get(defs) : "", file_in);
    cmds = eina_list_append(cmds, eina_strbuf_string_steal(buf));
-
 
    ecore_exe_pipe_run(cmds->data, ECORE_EXE_PIPE_READ, NULL); /* try first cmd */
    eina_strbuf_free(buf);
@@ -169,7 +172,7 @@ main(int   argc,
         const char *i;
         inc = eina_strbuf_new();
         EINA_LIST_FOREACH(includes, l, i)
-           eina_strbuf_append_printf(inc, "-I%s%s", i, l->next ? " " : "");
+          eina_strbuf_append_printf(inc, "-I%s%s", i, l->next ? " " : "");
      }
    if (defines)
      {
@@ -177,7 +180,7 @@ main(int   argc,
         const char *i;
         defs = eina_strbuf_new();
         EINA_LIST_FOREACH(defines, l, i)
-           eina_strbuf_append_printf(defs, "-D%s%s", i, l->next ? " " : "");
+          eina_strbuf_append_printf(defs, "-D%s%s", i, l->next ? " " : "");
      }
    if (debug) edje_parser_Trace(stdout, "Edje_Parser: ");
    ecore_event_handler_add(ECORE_EXE_EVENT_DATA, (Ecore_Event_Handler_Cb)compile_data_cb, NULL);
@@ -202,7 +205,7 @@ main(int   argc,
       EINA_LIST_FREE(cmds, s)
         free(s);
    }
-*/ 
+ */
    return 0;
 }
 
